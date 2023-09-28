@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kubevoyage.fullname" . }}
+  labels:
+    app: {{ include "kubevoyage.fullname" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "kubevoyage.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "kubevoyage.fullname" . }}
+    spec:
+      containers:
+        - name: kubevoyage
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 80
+          env:
+            - name: DB_TYPE
+              value: {{ .Values.database.type }}
+            - name: DB_HOST
+              value: {{ .Values.database.host }}
+            - name: DB_PORT
+              value: "{{ .Values.database.port }}"
+            - name: DB_USER
+              value: {{ .Values.database.user }}
+            - name: DB_NAME
+              value: {{ .Values.database.name }}
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kubevoyage.fullname" . }}-db-secret
+                  key: db-password
+
+
