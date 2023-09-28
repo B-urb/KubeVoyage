@@ -5,7 +5,7 @@
 
   onMount(async () => {
     try {
-      const response = await fetch('http://localhost:8081/api/requests');
+      const response = await fetch('http://localhost:8080/api/requests');
       if (response.ok) {
         requests = await response.json();
       } else {

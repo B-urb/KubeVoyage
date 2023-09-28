@@ -2,6 +2,8 @@
   import { Router, Route, Link } from 'svelte-routing';
   import routes from './routes.js';
   import 'bootstrap/dist/css/bootstrap.min.css';
+  import 'bootstrap-icons/font/bootstrap-icons.css';
+
 </script>
 
 <Router>

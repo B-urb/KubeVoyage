@@ -1,11 +1,31 @@
 <script>
-  import 'bootstrap-icons/font/bootstrap-icons.css';
 
   let email = '';
   let password = '';
+  let message = '';
 
-  function login() {
-    // Handle login logic here
+  async function login() {
+    try {
+      const response = await fetch('http://localhost:8080/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        message = "Login successful!";
+        // Optionally, set a token, redirect the user, or perform other actions
+        // For example: localStorage.setItem('token', data.token);
+      } else {
+        message = data.error || "Login failed!";
+      }
+    } catch (error) {
+      message = "An error occurred: " + error.message;
+    }
   }
 </script>
 
@@ -37,14 +57,13 @@
         <i class="bi bi-windows"></i> Microsoft
       </a>
     </div>
-
-    <style>
-      .sso-login {
-        text-align: center;
-      }
-      .sso-login .btn {
-        margin: 0 5px;
-      }
-    </style>
   </div>
 </div>
+<style>
+  .sso-login {
+    text-align: center;
+  }
+  .sso-login .btn {
+    margin: 0 5px;
+  }
+</style>
