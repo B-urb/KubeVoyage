@@ -93,7 +93,3 @@ Pull requests are welcome! For major changes, please open an issue first to disc
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
-
----
-
-This README provides a basic overview of the project. Depending on the specifics of your project, you might want to add more sections, such as "API Documentation", "Known Issues", "Future Enhancements", etc. Remember, a well-documented README can significantly improve the user experience for those trying to understand or contribute to your project.
