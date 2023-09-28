@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 	"log"
 	"net/http"
+	"os"
 	// or "gorm.io/driver/postgres" for PostgreSQL
 )
 
@@ -23,8 +24,33 @@ func main() {
 
 	// Migrate the schema
 	db.AutoMigrate(&models.User{}, &models.Site{}, &models.UserSite{})
-	generateTestData()
+	//generateTestData()
+
 	handler := cors.Default().Handler(mux)
+
+	// Serve static files
+	fs := http.FileServer(http.Dir("../frontend/public/")) // Adjust the path based on your directory structure
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Check if it's an API route first
+		if isAPIRoute(r.URL.Path) {
+			// Handle API routes separately
+			return
+		}
+
+		path := "../frontend/public" + r.URL.Path
+		log.Println(path)
+		_, err := os.Stat(path)
+
+		// If the file exists, serve it
+		if !os.IsNotExist(err) {
+			fs.ServeHTTP(w, r)
+			return
+		}
+
+		// Otherwise, serve index.html
+		http.ServeFile(w, r, "../frontend/public/index.html")
+	})
+
 	mux.HandleFunc("/api/requests", func(w http.ResponseWriter, r *http.Request) {
 		handlers.HandleRequests(w, r, db)
 	})
@@ -32,14 +58,18 @@ func main() {
 		handlers.HandleRegister(w, r, db)
 	})
 	mux.HandleFunc("/api/login", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandleRegister(w, r, db)
+		handlers.HandleLogin(w, r, db)
 	})
 	// Start the server on port 8081
-	log.Fatal(http.ListenAndServe(":8081", handler))
+	log.Println("Starting server on :8080")
+
+	log.Fatal(http.ListenAndServe(":8080", handler))
 
 	// ... setup your routes and start your server
 }
-
+func isAPIRoute(path string) bool {
+	return len(path) >= 4 && path[0:4] == "/api"
+}
 func generateTestData() {
 	// Insert test data for Users
 	users := []models.User{
