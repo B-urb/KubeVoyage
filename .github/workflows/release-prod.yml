@@ -1,0 +1,106 @@
+name: Deploy Release
+on:
+  push:
+    branches:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+env:
+  CI: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+      - name: Copy Frontend distributable
+        run: cp -r frontend/dist src/main/resources
+      - name: Install dependencies
+        run: go get .
+      - name: Build
+        working-directory: backend
+        run: go build -o build/kubevoyage ./cmd/kubevoyage
+      #- name: Test with the Go CLI
+      #  run: go test
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: production-artifacts
+          path: |
+            backend/build/
+            frontend/public
+  build-docker:
+    needs: build
+    runs-on: ubuntu-latest
+    if: ${{ github.ref }} != 'master' && ${{ github.ref }} != 'development'
+    env:
+      BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Download build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: production-artifacts
+      - name: Set up Docker Build
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Registry
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/kubevoyage:${{ env.BRANCH_NAME }}
+
+  pulumi-deploy:
+    needs: build-docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - run: npm install
+        working-directory: deploy
+      - name: Decode kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d >  $HOME/.kube/config
+          cat $HOME/.kube/config
+        shell: bash
+      - name: Deploy with Pulumi
+        uses: pulumi/actions@v4
+        with:
+          command: up
+          stack-name: prod
+          work-dir: deploy
+    env:
+      PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+      registryImage: ${{ secrets.DOCKERHUB_USERNAME }}/kubevoyage
+      imageTag: ${{ github.head_ref || github.ref_name }}
