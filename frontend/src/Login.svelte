@@ -1,5 +1,7 @@
 <script>
 
+  import {navigate} from "svelte-routing";
+
   let email = '';
   let password = '';
   let message = '';
@@ -18,6 +20,7 @@
 
       if (response.ok) {
         message = "Login successful!";
+        navigate("/")
         // Optionally, set a token, redirect the user, or perform other actions
         // For example: localStorage.setItem('token', data.token);
       } else {
