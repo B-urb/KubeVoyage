@@ -60,6 +60,12 @@ func main() {
 	mux.HandleFunc("/api/login", func(w http.ResponseWriter, r *http.Request) {
 		handlers.HandleLogin(w, r, db)
 	})
+	mux.HandleFunc("/api/authenticate", func(w http.ResponseWriter, r *http.Request) {
+		handlers.HandleAuthenticate(w, r, db)
+	})
+	mux.HandleFunc("/api/request", func(w http.ResponseWriter, r *http.Request) {
+		handlers.HandleRequestSite(w, r, db)
+	})
 	// Start the server on port 8081
 	log.Println("Starting server on :8080")
 
