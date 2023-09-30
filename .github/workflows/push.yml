@@ -86,7 +86,7 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/kubevoyage:${{ env.BRANCH_NAME }}
   release:
-    needs: build-docker
+    needs: helm-release
     runs-on: ubuntu-latest
     permissions:
       contents: write
