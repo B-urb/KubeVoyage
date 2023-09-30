@@ -42,8 +42,6 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
-      - name: Copy Frontend distributable
-        run: cp -r frontend/dist src/main/resources
       - name: Install dependencies
         run: go get .
       - name: Build
