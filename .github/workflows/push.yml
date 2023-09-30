@@ -55,7 +55,7 @@ jobs:
         with:
           name: production-artifacts
           path: |
-            backend/build
+            backend/
             frontend/public
 
   build-docker:
