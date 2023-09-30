@@ -11,8 +11,8 @@ service:
 
 database:
   type: postgres # default type, can be changed to mysql, sqlite, etc.
-  host: localhost
-  port: 5432
-  user: dbuser
-  password: dbpassword
-  name: dbname
+  host:
+  port:
+  user:
+  password:
+  name:
