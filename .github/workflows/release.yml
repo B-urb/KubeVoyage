@@ -100,6 +100,8 @@ jobs:
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.5.0
+        with:
+          charts_dir: deploy/charts
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
           registryImage: ${{ secrets.DOCKERHUB_USERNAME }}/kubevoyage
