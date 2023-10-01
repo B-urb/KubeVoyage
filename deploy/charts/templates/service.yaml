@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "kubevoyage.fullname" . }}
+  namespace: {{ .Values.app.namespace }}
   labels:
     app: {{ include "kubevoyage.fullname" . }}
 spec:

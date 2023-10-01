@@ -134,11 +134,17 @@ func HandleAuthenticate(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	}
 
 	// 2. Extract the redirect parameter from the request to get the site URL.
-	siteURL := r.URL.Query().Get("redirect")
+	siteURL := r.Header.Get("X-Forwarded-Uri")
 	if siteURL == "" {
 		http.Error(w, "Redirect URL missing", http.StatusBadRequest)
 		return
 	}
+
+	//siteURL := r.URL.Query().Get("redirect")
+	//if siteURL == "" {
+	//	http.Error(w, "Redirect URL missing", http.StatusBadRequest)
+	//	return
+	//}
 
 	// 3. Query the database to check if the user has an "authorized" state for the given site.
 	var userSite models.UserSite

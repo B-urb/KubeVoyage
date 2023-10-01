@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"github.com/B-Urb/KubeVoyage/internal/handlers"
 	"github.com/B-Urb/KubeVoyage/internal/models"
 	"github.com/rs/cors"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"log"
@@ -15,10 +18,34 @@ import (
 var db *gorm.DB
 
 func main() {
+	// Read environment variables
+	dbType := os.Getenv("DB_TYPE")
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+
+	var dsn string
 	var err error
-	db, err = gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
+	var db *gorm.DB
+
+	switch dbType {
+	case "mysql":
+		dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", dbUser, dbPassword, dbHost, dbPort, dbName)
+		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	case "postgres":
+		dsn = fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable", dbHost, dbPort, dbUser, dbName, dbPassword)
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	case "sqlite":
+		dsn = dbName // For SQLite, dbName would be the path to the .db file
+		db, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	default:
+		log.Fatalf("Unsupported DB_TYPE: %s", dbType)
+	}
+
 	if err != nil {
-		panic("failed to connect database")
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	mux := http.NewServeMux()
 
