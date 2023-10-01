@@ -74,7 +74,8 @@ Visit `http://localhost:8080` in your browser.
 Use the provided Helm chart to deploy `KubeVoyage` to your Kubernetes cluster:
 
 ```bash
-helm install kubevoyage ./path_to_helm_chart
+helm repo add github-burban https://B-urb.github.io/KubeVoyage/
+helm install kubevoyage github-burban/kubevoyage
 ```
 
 ## Testing
