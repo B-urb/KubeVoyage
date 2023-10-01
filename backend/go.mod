@@ -2,6 +2,7 @@ module github.com/B-Urb/KubeVoyage
 
 go 1.21
 
+
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/rs/cors v1.10.0

@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/B-Urb/KubeVoyage/internal/models"
+	"github.com/B-Urb/KubeVoyage/internal/util"
+	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/scrypt"
 	"gorm.io/gorm"
 	"log"
@@ -16,9 +18,26 @@ import (
 	"time"
 )
 
-var jwtKey = []byte("your_secret_key")
+type Handler struct {
+	db      *gorm.DB
+	JWTKey  []byte
+	BaseURL string
+}
 
-func (app *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
+func NewHandler(db *gorm.DB) *Handler {
+	jwtKey, err := util.GetEnvOrError("JWT_SECRET_KEY")
+	if err != nil {
+		log.Fatalf("Error reading JWT_SECRET_KEY: %v", err)
+	}
+
+	baseURL, err := util.GetEnvOrError("BASE_URL")
+	if err != nil {
+		log.Fatalf("Error reading BASE_URL: %v", err)
+	}
+	return &Handler{db: db, JWTKey: []byte(jwtKey), BaseURL: baseURL}
+}
+
+func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	var inputUser models.User
 	var dbUser models.User
 
@@ -30,7 +49,7 @@ func (app *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch the user from the database
-	result := db.Where("email = ?", inputUser.Email).First(&dbUser)
+	result := h.db.Where("email = ?", inputUser.Email).First(&dbUser)
 	if result.Error != nil {
 		sendJSONError(w, "User not found", http.StatusNotFound)
 		return
@@ -54,7 +73,7 @@ func (app *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// Sign and get the complete encoded token as a string using the secret
-	tokenString, err := token.SignedString(jwtKey)
+	tokenString, err := token.SignedString(h.JWTKey)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -79,10 +98,13 @@ func (app *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	// Here, you'd typically generate a JWT or session token and send it back to the client.
 	// For simplicity, we'll just send a success message.
-	w.Write([]byte("Login successful"))
+	_, err = w.Write([]byte("Login successful"))
+	if err != nil {
+		return
+	}
 }
 
-func (app *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 
 	// Parse the request body
@@ -107,7 +129,7 @@ func (app *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	user.Password = base64.StdEncoding.EncodeToString(hash)
 	var existingUser models.User
-	if err := db.Where("email = ?", user.Email).First(&existingUser).Error; err != nil {
+	if err := h.db.Where("email = ?", user.Email).First(&existingUser).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			sendJSONError(w, "Database error", http.StatusInternalServerError)
 			return
@@ -117,7 +139,7 @@ func (app *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Save the user to the database
-	result := db.Create(&user)
+	result := h.db.Create(&user)
 	if result.Error != nil {
 		sendJSONError(w, result.Error.Error(), http.StatusInternalServerError)
 		return
@@ -125,11 +147,11 @@ func (app *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 
 	sendJSONSuccess(w, "", http.StatusCreated)
 }
-func (app *App) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract the user's email from the session or JWT token.
-	userEmail, err := app.getUserEmailFromToken(r)
+	userEmail, err := h.getUserEmailFromToken(r)
 	if err != nil {
-		app.logError(w, "Failed to get user email from token", err, http.StatusUnauthorized)
+		h.logError(w, "Failed to get user email from token", err, http.StatusUnauthorized)
 		return
 	}
 
@@ -138,14 +160,14 @@ func (app *App) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	if siteURL == "" {
 		siteURL = r.URL.Query().Get("redirect")
 		if siteURL == "" {
-			app.logError(w, "Redirect URL missing from both header and URL parameter", nil, http.StatusBadRequest)
+			h.logError(w, "Redirect URL missing from both header and URL parameter", nil, http.StatusBadRequest)
 			return
 		}
 	}
 
 	// 3. Query the database to check if the user has an "authorized" state for the given site.
 	var userSite models.UserSite
-	err = app.DB.Joins("JOIN users ON users.id = user_sites.user_id").
+	err = h.db.Joins("JOIN users ON users.id = user_sites.user_id").
 		Joins("JOIN sites ON sites.id = user_sites.site_id").
 		Where("users.email = ? AND sites.url = ? AND user_sites.state = ?", userEmail, siteURL, "authorized").
 		First(&userSite).Error
@@ -156,13 +178,13 @@ func (app *App) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/request?redirect="+url.QueryEscape(siteURL), http.StatusSeeOther)
 			return
 		}
-		app.logError(w, "Database error while checking user authorization", err, http.StatusInternalServerError)
+		h.logError(w, "Database error while checking user authorization", err, http.StatusInternalServerError)
 		return
 	}
 	http.Redirect(w, r, siteURL, http.StatusSeeOther)
 }
 
-func (app *App) logError(w http.ResponseWriter, message string, err error, statusCode int) {
+func (h *Handler) logError(w http.ResponseWriter, message string, err error, statusCode int) {
 	logMessage := message
 	if err != nil {
 		logMessage = fmt.Sprintf("%s: %v", message, err)
@@ -171,7 +193,7 @@ func (app *App) logError(w http.ResponseWriter, message string, err error, statu
 	http.Error(w, message, statusCode)
 }
 
-func getUserEmailFromToken(r *http.Request) (string, error) {
+func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
 	cookie, err := r.Cookie("auth_token")
 	if err != nil {
 		return "", fmt.Errorf("Authentication cookie missing")
@@ -181,7 +203,7 @@ func getUserEmailFromToken(r *http.Request) (string, error) {
 	claims := &jwt.MapClaims{}
 
 	_, err = jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
+		return h.JWTKey, nil
 	})
 
 	if err != nil {

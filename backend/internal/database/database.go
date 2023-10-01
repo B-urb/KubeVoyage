@@ -2,41 +2,41 @@ package database
 
 import (
 	"fmt"
+	"github.com/B-Urb/KubeVoyage/internal/util"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"os"
 )
 
 func InitializeDatabase() (*gorm.DB, error) {
 	// Read environment variables
-	dbType, err := getEnvOrError("DB_TYPE")
+	dbType, err := util.GetEnvOrError("DB_TYPE")
 	if err != nil {
 		return nil, err
 	}
 
-	dbHost, err := getEnvOrError("DB_HOST")
+	dbHost, err := util.GetEnvOrError("DB_HOST")
 	if err != nil {
 		return nil, err
 	}
 
-	dbPort, err := getEnvOrError("DB_PORT")
+	dbPort, err := util.GetEnvOrError("DB_PORT")
 	if err != nil {
 		return nil, err
 	}
 
-	dbUser, err := getEnvOrError("DB_USER")
+	dbUser, err := util.GetEnvOrError("DB_USER")
 	if err != nil {
 		return nil, err
 	}
 
-	dbPassword, err := getEnvOrError("DB_PASSWORD")
+	dbPassword, err := util.GetEnvOrError("DB_PASSWORD")
 	if err != nil {
 		return nil, err
 	}
 
-	dbName, err := getEnvOrError("DB_NAME")
+	dbName, err := util.GetEnvOrError("DB_NAME")
 	if err != nil {
 		return nil, err
 	}
@@ -63,12 +63,4 @@ func InitializeDatabase() (*gorm.DB, error) {
 	}
 
 	return db, nil
-}
-
-func getEnvOrError(key string) (string, error) {
-	value := os.Getenv(key)
-	if value == "" {
-		return "", fmt.Errorf("Environment variable %s not set", key)
-	}
-	return value, nil
 }
