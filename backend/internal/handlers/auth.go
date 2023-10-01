@@ -8,9 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/B-Urb/KubeVoyage/internal/models"
-	"github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/scrypt"
 	"gorm.io/gorm"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -18,7 +18,7 @@ import (
 
 var jwtKey = []byte("your_secret_key")
 
-func HandleLogin(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+func (app *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	var inputUser models.User
 	var dbUser models.User
 
@@ -82,7 +82,7 @@ func HandleLogin(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	w.Write([]byte("Login successful"))
 }
 
-func HandleRegister(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+func (app *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	var user models.User
 
 	// Parse the request body
@@ -125,30 +125,27 @@ func HandleRegister(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 
 	sendJSONSuccess(w, "", http.StatusCreated)
 }
-func HandleAuthenticate(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+func (app *App) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract the user's email from the session or JWT token.
-	userEmail, err := getUserEmailFromToken(r)
+	userEmail, err := app.getUserEmailFromToken(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		app.logError(w, "Failed to get user email from token", err, http.StatusUnauthorized)
 		return
 	}
 
 	// 2. Extract the redirect parameter from the request to get the site URL.
 	siteURL := r.Header.Get("X-Forwarded-Uri")
 	if siteURL == "" {
-		http.Error(w, "Redirect URL missing", http.StatusBadRequest)
-		return
+		siteURL = r.URL.Query().Get("redirect")
+		if siteURL == "" {
+			app.logError(w, "Redirect URL missing from both header and URL parameter", nil, http.StatusBadRequest)
+			return
+		}
 	}
-
-	//siteURL := r.URL.Query().Get("redirect")
-	//if siteURL == "" {
-	//	http.Error(w, "Redirect URL missing", http.StatusBadRequest)
-	//	return
-	//}
 
 	// 3. Query the database to check if the user has an "authorized" state for the given site.
 	var userSite models.UserSite
-	err = db.Joins("JOIN users ON users.id = user_sites.user_id").
+	err = app.DB.Joins("JOIN users ON users.id = user_sites.user_id").
 		Joins("JOIN sites ON sites.id = user_sites.site_id").
 		Where("users.email = ? AND sites.url = ? AND user_sites.state = ?", userEmail, siteURL, "authorized").
 		First(&userSite).Error
@@ -159,13 +156,19 @@ func HandleAuthenticate(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 			http.Redirect(w, r, "/request?redirect="+url.QueryEscape(siteURL), http.StatusSeeOther)
 			return
 		}
-		http.Error(w, "Database error", http.StatusInternalServerError)
+		app.logError(w, "Database error while checking user authorization", err, http.StatusInternalServerError)
 		return
 	}
 	http.Redirect(w, r, siteURL, http.StatusSeeOther)
+}
 
-	// If everything is fine, return a success message.
-	//w.Write([]byte("Access granted"))
+func (app *App) logError(w http.ResponseWriter, message string, err error, statusCode int) {
+	logMessage := message
+	if err != nil {
+		logMessage = fmt.Sprintf("%s: %v", message, err)
+	}
+	log.Println(logMessage)
+	http.Error(w, message, statusCode)
 }
 
 func getUserEmailFromToken(r *http.Request) (string, error) {
