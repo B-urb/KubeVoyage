@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/B-Urb/KubeVoyage/internal/models"
 	"github.com/B-Urb/KubeVoyage/internal/util"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/scrypt"
 	"gorm.io/gorm"
 	"log"
