@@ -35,6 +35,10 @@ auth:
   adminUser:
   adminPassword:
 
+secret:
+  jwtSecret:
+
+
 database:
   type: postgres # default type, can be changed to mysql, sqlite, etc.
   host:
