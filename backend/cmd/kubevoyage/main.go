@@ -16,6 +16,8 @@ import (
 
 var db *gorm.DB
 
+var frontendPathLocal = "../frontend/public" //./public
+
 type loggingResponseWriter struct {
 	http.ResponseWriter
 	statusCode int
@@ -78,7 +80,7 @@ func setupServer(handle *handlers.Handler) http.Handler {
 	handler := cors.Default().Handler(mux)
 
 	// Serve static files
-	fs := http.FileServer(http.Dir("./public/")) // Adjust the path based on your directory structure
+	fs := http.FileServer(http.Dir(frontendPathLocal)) // Adjust the path based on your directory structure
 	mux.Handle("/", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Check if it's an API route first
 		if isAPIRoute(r.URL.Path) {
@@ -86,7 +88,7 @@ func setupServer(handle *handlers.Handler) http.Handler {
 			return
 		}
 
-		path := "./public" + r.URL.Path
+		path := frontendPathLocal + r.URL.Path
 		absolutePath, err := filepath.Abs(path)
 		if err != nil {
 			fmt.Println("Error getting absolute path:", err)
@@ -103,7 +105,7 @@ func setupServer(handle *handlers.Handler) http.Handler {
 			log.Println(err)
 		}
 		// Otherwise, serve index.html
-		http.ServeFile(w, r, "./public/index.html")
+		http.ServeFile(w, r, frontendPathLocal+"/index.html")
 	})))
 
 	mux.Handle("/api/requests", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

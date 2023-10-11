@@ -14,7 +14,6 @@ import (
 	"gorm.io/gorm"
 	"log"
 	"net/http"
-	"net/url"
 	"time"
 )
 
@@ -89,12 +88,12 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Domain:   domain, // Adjust to your domain
 		Path:     "/",
 	})
-	siteURL := r.URL.Query().Get("redirect")
+	siteURL, err := h.getRedirectFromCookie(r, w)
 	if siteURL == "" {
 		http.Error(w, "Redirect URL missing", http.StatusBadRequest)
 		return
 	} else {
-		http.Redirect(w, r, url.QueryEscape(siteURL), http.StatusSeeOther)
+		http.Redirect(w, r, siteURL, http.StatusSeeOther)
 	}
 	// Here, you'd typically generate a JWT or session token and send it back to the client.
 	// For simplicity, we'll just send a success message.
@@ -157,7 +156,8 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	userEmail, err := h.getUserEmailFromToken(r)
 	if err != nil {
 		// If the user cannot be read from the cookie, redirect to /login with the site URL as a parameter
-		http.Redirect(w, r, "/login?redirect="+url.QueryEscape(siteURL), http.StatusSeeOther)
+		h.setRedirectCookie(siteURL, r, w)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
@@ -226,6 +226,44 @@ func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
 	return userEmail, nil
 }
 
+func (h *Handler) setRedirectCookie(redirectUrl string, r *http.Request, w http.ResponseWriter) error {
+	domain, err := extractMainDomain(r.URL.String())
+	if err != nil {
+		log.Println(err.Error())
+	}
+	log.Println(domain)
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth-site",
+		Value:    redirectUrl,
+		Expires:  time.Now().Add(15 * time.Minute), // Shorter duration
+		HttpOnly: true,
+		Secure:   true,                  // Set this to true if using HTTPS
+		SameSite: http.SameSiteNoneMode, // Set this to true if using HTTPS
+		Domain:   domain,                // Adjust to your domain
+		Path:     "/",
+	})
+	return nil
+}
+func (h *Handler) getRedirectFromCookie(r *http.Request, w http.ResponseWriter) (string, error) {
+	cookie, err := r.Cookie("auth-site")
+	if err != nil {
+		if errors.Is(err, http.ErrNoCookie) {
+			// No cookie found
+			return "", nil
+		}
+		return "", err
+	}
+
+	// Clear the cookie once it's read
+	//http.SetCookie(w, &http.Cookie{
+	//	Name:    "auth-site",
+	//	Value:   "",
+	//	Expires: time.Unix(0, 0),
+	//	Path:    "/",
+	//})
+
+	return cookie.Value, nil
+}
 func (h *Handler) getRedirectUrl(r *http.Request) (string, error) {
 	// Extract the redirect parameter from the request to get the site URL.
 	siteURL := r.Header.Get("X-Forwarded-Uri")
