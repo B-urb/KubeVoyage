@@ -23,8 +23,13 @@ func InitializeDatabase() (*gorm.DB, error) {
 	var dsn string
 	var db *gorm.DB
 
+	dbName, err := util.GetEnvOrDefault("DB_NAME", "kubevoyage")
+	if err != nil {
+		return nil, err
+	}
+
 	switch dbType {
-	case "mysql":
+	case "mysql", "postgres":
 		dbHost, err := util.GetEnvOrError("DB_HOST")
 		if err != nil {
 			return nil, err
@@ -45,49 +50,15 @@ func InitializeDatabase() (*gorm.DB, error) {
 			return nil, err
 		}
 
-		dbName, err := util.GetEnvOrDefault("DB_NAME", "kubevoyage")
-		if err != nil {
-			return nil, err
+		if dbType == "mysql" {
+			dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", dbUser, dbPassword, dbHost, dbPort, dbName)
+			db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+		} else {
+			dsn = fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable", dbHost, dbPort, dbUser, dbName, dbPassword)
+			db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 		}
-
-		dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", dbUser, dbPassword, dbHost, dbPort, dbName)
-		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
-
-	case "postgres":
-		dbHost, err := util.GetEnvOrError("DB_HOST")
-		if err != nil {
-			return nil, err
-		}
-
-		dbPort, err := util.GetEnvOrError("DB_PORT")
-		if err != nil {
-			return nil, err
-		}
-
-		dbUser, err := util.GetEnvOrError("DB_USER")
-		if err != nil {
-			return nil, err
-		}
-
-		dbPassword, err := util.GetEnvOrError("DB_PASSWORD")
-		if err != nil {
-			return nil, err
-		}
-
-		dbName, err := util.GetEnvOrDefault("DB_NAME", "kubevoyage")
-		if err != nil {
-			return nil, err
-		}
-
-		dsn = fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable", dbHost, dbPort, dbUser, dbName, dbPassword)
-		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
 	case "sqlite":
-		dbName, err := util.GetEnvOrDefault("DB_NAME", "kubevoyage")
-		if err != nil {
-			return nil, err
-		}
-
 		dsn = dbName // For SQLite, dbName would be the path to the .db file
 		db, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 
