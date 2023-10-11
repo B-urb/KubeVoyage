@@ -31,8 +31,8 @@ func HandleRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 
 }
 
-func HandleRequestSite(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	userEmail, err := getUserEmailFromToken(r)
+func (h *Handler) HandleRequestSite(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
+	userEmail, err := h.getUserEmailFromToken(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return

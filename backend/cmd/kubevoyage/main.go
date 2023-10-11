@@ -68,7 +68,7 @@ func setupServer(handle *handlers.Handler) http.Handler {
 		handle.HandleAuthenticate(w, r)
 	})
 	mux.HandleFunc("/api/request", func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandleRequestSite(w, r, db)
+		handle.HandleRequestSite(w, r, db)
 	})
 
 	return handler
