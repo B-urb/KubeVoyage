@@ -62,7 +62,10 @@ func main() {
 	}
 
 	handler := handlers.NewHandler(app.DB)
-	app.Migrate()
+	err = app.Init()
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
 
 	mux := setupServer(handler)
 
