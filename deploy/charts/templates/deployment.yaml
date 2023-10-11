@@ -52,7 +52,7 @@ spec:
             - name: ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: -secret
+                  name: {{ include "kubevoyage.fullname" . }}-secret
                   key: admin-password
 
 
