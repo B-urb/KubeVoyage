@@ -148,21 +148,29 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	sendJSONSuccess(w, "", http.StatusCreated)
 }
 func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
+	siteURL, err := h.getRedirectUrl(r)
+	if err != nil {
+		h.logError(w, err.Error(), nil, http.StatusBadRequest)
+		return
+	}
 	// 1. Extract the user's email from the session or JWT token.
 	userEmail, err := h.getUserEmailFromToken(r)
 	if err != nil {
-		h.logError(w, "Failed to get user email from token", err, http.StatusUnauthorized)
+		// If the user cannot be read from the cookie, redirect to /login with the site URL as a parameter
+		http.Redirect(w, r, "/login?redirect="+url.QueryEscape(siteURL), http.StatusSeeOther)
 		return
 	}
 
-	// 2. Extract the redirect parameter from the request to get the site URL.
-	siteURL := r.Header.Get("X-Forwarded-Uri")
-	if siteURL == "" {
-		siteURL = r.URL.Query().Get("redirect")
-		if siteURL == "" {
-			h.logError(w, "Redirect URL missing from both header and URL parameter", nil, http.StatusBadRequest)
-			return
-		}
+	// Check if the user has the role "admin"
+	var user models.User
+	err = h.db.Where("email = ?", userEmail).First(&user).Error
+	if err != nil {
+		h.logError(w, "Database error while fetching user details", err, http.StatusInternalServerError)
+		return
+	}
+	if user.Role == "admin" {
+		w.WriteHeader(http.StatusOK)
+		return
 	}
 
 	// 3. Query the database to check if the user has an "authorized" state for the given site.
@@ -174,14 +182,14 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Redirect to /request if no authorized site is found for the user
-			http.Redirect(w, r, "/request?redirect="+url.QueryEscape(siteURL), http.StatusSeeOther)
+			// Return 401 if the user is not authorized for the requested siteURL
+			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 		h.logError(w, "Database error while checking user authorization", err, http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, siteURL, http.StatusSeeOther)
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) logError(w http.ResponseWriter, message string, err error, statusCode int) {
@@ -216,4 +224,16 @@ func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
 	}
 
 	return userEmail, nil
+}
+
+func (h *Handler) getRedirectUrl(r *http.Request) (string, error) {
+	// Extract the redirect parameter from the request to get the site URL.
+	siteURL := r.Header.Get("X-Forwarded-Uri")
+	if siteURL == "" {
+		siteURL = r.URL.Query().Get("redirect")
+		if siteURL == "" {
+			return "", fmt.Errorf("Redirect URL missing from both header and URL parameter")
+		}
+	}
+	return siteURL, nil
 }

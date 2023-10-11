@@ -10,15 +10,55 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 	// or "gorm.io/driver/postgres" for PostgreSQL
 )
 
 var db *gorm.DB
 
+type loggingResponseWriter struct {
+	http.ResponseWriter
+	statusCode int
+	length     int
+}
+
+func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
+	if lrw.statusCode == 0 {
+		// Default status code is 200 OK.
+		lrw.statusCode = http.StatusOK
+	}
+	size, err := lrw.ResponseWriter.Write(b)
+	lrw.length += size
+	return size, err
+}
+
+func (lrw *loggingResponseWriter) WriteHeader(statusCode int) {
+	lrw.statusCode = statusCode
+	lrw.ResponseWriter.WriteHeader(statusCode)
+}
+func logMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		lrw := &loggingResponseWriter{ResponseWriter: w}
+		start := time.Now()
+
+		next.ServeHTTP(lrw, r)
+
+		duration := time.Since(start)
+		log.Printf(
+			"Method: %s, Path: %s, RemoteAddr: %s, Duration: %s, StatusCode: %d, ResponseSize: %d bytes\n",
+			r.Method,
+			r.URL.Path,
+			r.RemoteAddr,
+			duration,
+			lrw.statusCode,
+			lrw.length,
+		)
+	})
+}
 func main() {
 	app, err := application.NewApp() // Assuming NewApp is in the same package
 	if err != nil {
-		// Handle error
+		log.Fatalf(err.Error())
 	}
 
 	handler := handlers.NewHandler(app.DB)
@@ -36,7 +76,7 @@ func setupServer(handle *handlers.Handler) http.Handler {
 
 	// Serve static files
 	fs := http.FileServer(http.Dir("./public/")) // Adjust the path based on your directory structure
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Check if it's an API route first
 		if isAPIRoute(r.URL.Path) {
 			// Handle API routes separately
@@ -61,23 +101,23 @@ func setupServer(handle *handlers.Handler) http.Handler {
 		}
 		// Otherwise, serve index.html
 		http.ServeFile(w, r, "./public/index.html")
-	})
+	})))
 
-	mux.HandleFunc("/api/requests", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/requests", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handlers.HandleRequests(w, r, db)
-	})
-	mux.HandleFunc("/api/register", func(w http.ResponseWriter, r *http.Request) {
+	})))
+	mux.Handle("/api/register", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handle.HandleRegister(w, r)
-	})
-	mux.HandleFunc("/api/login", func(w http.ResponseWriter, r *http.Request) {
+	})))
+	mux.Handle("/api/login", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handle.HandleLogin(w, r)
-	})
-	mux.HandleFunc("/api/authenticate", func(w http.ResponseWriter, r *http.Request) {
+	})))
+	mux.Handle("/api/authenticate", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handle.HandleAuthenticate(w, r)
-	})
-	mux.HandleFunc("/api/request", func(w http.ResponseWriter, r *http.Request) {
+	})))
+	mux.Handle("/api/request", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handle.HandleRequestSite(w, r, db)
-	})
+	})))
 
 	return handler
 }
