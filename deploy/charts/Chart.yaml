@@ -1,4 +1,4 @@
 apiVersion: v2
 name: kubevoyage
 description: A Helm chart for Kubernetes auth proxy
-version: 0.5.0
+version: 0.6.0

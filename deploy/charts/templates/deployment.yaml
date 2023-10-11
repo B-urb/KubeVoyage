@@ -44,5 +44,15 @@ spec:
                 secretKeyRef:
                   name: {{ include "kubevoyage.fullname" . }}-secret
                   key: jwt-secret
+            - name: ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kubevoyage.fullname" . }}-secret
+                  key: admin-user
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: -secret
+                  key: admin-password
 
 
