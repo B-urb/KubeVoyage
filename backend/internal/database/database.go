@@ -66,10 +66,5 @@ func InitializeDatabase() (*gorm.DB, error) {
 		return nil, fmt.Errorf("Failed to connect to database: %v", err)
 	}
 
-	// After successfully connecting to the database
-	if err := createAdminUserIfNotExist(db); err != nil {
-		return nil, fmt.Errorf("Failed to create admin user: %v", err)
-	}
-
 	return db, nil
 }
