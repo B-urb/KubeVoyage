@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/B-Urb/KubeVoyage/internal/app"
 	"github.com/B-Urb/KubeVoyage/internal/handlers"
 	"github.com/rs/cors"
@@ -8,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	// or "gorm.io/driver/postgres" for PostgreSQL
 )
 
@@ -42,15 +44,21 @@ func setupServer(handle *handlers.Handler) http.Handler {
 		}
 
 		path := "../public" + r.URL.Path
-		log.Println(path)
-		_, err := os.Stat(path)
+		absolutePath, err := filepath.Abs(path)
+		if err != nil {
+			fmt.Println("Error getting absolute path:", err)
+			return
+		}
+		fmt.Println("Absolute Path:", absolutePath)
+		_, err = os.Stat(path)
 
 		// If the file exists, serve it
 		if !os.IsNotExist(err) {
 			fs.ServeHTTP(w, r)
 			return
+		} else {
+			log.Println(err)
 		}
-
 		// Otherwise, serve index.html
 		http.ServeFile(w, r, "../public/index.html")
 	})

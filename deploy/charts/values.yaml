@@ -35,10 +35,9 @@ auth:
   adminUser:
   adminPassword:
 
-secret:
+additionalEnvVars:
   jwtSecret:
-
-
+  baseUrl:
 database:
   type: postgres # default type, can be changed to mysql, sqlite, etc.
   host:

@@ -22,6 +22,8 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            - name: BASE_URL
+              value: {{ .Values.additionalEnvVars.baseUrl }}
             - name: DB_TYPE
               value: {{ .Values.database.type }}
             - name: DB_HOST
