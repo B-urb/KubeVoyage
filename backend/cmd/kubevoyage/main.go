@@ -35,7 +35,7 @@ func setupServer(handle *handlers.Handler) http.Handler {
 	handler := cors.Default().Handler(mux)
 
 	// Serve static files
-	fs := http.FileServer(http.Dir("../public/")) // Adjust the path based on your directory structure
+	fs := http.FileServer(http.Dir("./public/")) // Adjust the path based on your directory structure
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// Check if it's an API route first
 		if isAPIRoute(r.URL.Path) {
@@ -43,7 +43,7 @@ func setupServer(handle *handlers.Handler) http.Handler {
 			return
 		}
 
-		path := "../public" + r.URL.Path
+		path := "./public" + r.URL.Path
 		absolutePath, err := filepath.Abs(path)
 		if err != nil {
 			fmt.Println("Error getting absolute path:", err)
@@ -60,7 +60,7 @@ func setupServer(handle *handlers.Handler) http.Handler {
 			log.Println(err)
 		}
 		// Otherwise, serve index.html
-		http.ServeFile(w, r, "../public/index.html")
+		http.ServeFile(w, r, "./public/index.html")
 	})
 
 	mux.HandleFunc("/api/requests", func(w http.ResponseWriter, r *http.Request) {
