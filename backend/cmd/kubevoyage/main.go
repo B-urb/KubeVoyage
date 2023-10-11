@@ -16,7 +16,7 @@ import (
 
 var db *gorm.DB
 
-var frontendPathLocal = "../frontend/public" //./public
+var frontendPathLocal = "./public" //./public
 
 type loggingResponseWriter struct {
 	http.ResponseWriter
