@@ -4,3 +4,8 @@
 {{- define "kubevoyage.fullname" -}}
 {{- printf "%s-%s" .Release.Name .Chart.Name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
+
+{{- define "kubevoyage.labels" -}}
+app.kubernetes.io/name: {{ include "kubevoyage.fullname" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
