@@ -266,13 +266,17 @@ func (h *Handler) getRedirectFromCookie(r *http.Request, w http.ResponseWriter) 
 }
 func (h *Handler) getRedirectUrl(r *http.Request) (string, error) {
 	// Extract the redirect parameter from the request to get the site URL.
-	printHeaders(r)
+
 	siteURL := r.Header.Get("X-Forwarded-Uri")
 	if siteURL == "" {
+		siteURL = r.Header.Get("Referer")
+	}
+	if siteURL == "" {
 		siteURL = r.URL.Query().Get("redirect")
-		if siteURL == "" {
-			return "", fmt.Errorf("Redirect URL missing from both header and URL parameter")
-		}
+	}
+	if siteURL == "" {
+		printHeaders(r)
+		return "", fmt.Errorf("Redirect URL missing from both header and URL parameter")
 	}
 	return siteURL, nil
 }
