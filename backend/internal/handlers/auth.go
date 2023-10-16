@@ -152,6 +152,7 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		h.logError(w, err.Error(), nil, http.StatusBadRequest)
 		return
 	}
+	log.Println(siteURL)
 	// 1. Extract the user's email from the session or JWT token.
 	userEmail, err := h.getUserEmailFromToken(r)
 	if err != nil {
@@ -227,6 +228,7 @@ func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
 }
 
 func (h *Handler) setRedirectCookie(redirectUrl string, r *http.Request, w http.ResponseWriter) error {
+	log.Println("Host is: " + r.URL.Host)
 	domain, err := extractMainDomain(r.URL.String())
 	if err != nil {
 		log.Println(err.Error())

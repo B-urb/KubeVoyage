@@ -3,12 +3,14 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
 )
 
 func extractMainDomain(u string) (string, error) {
+	log.Println("Parsing input: " + u)
 	// Prepend http:// if no scheme is provided, this ensures url.Parse succeeds
 	if !strings.Contains(u, "//") {
 		u = "http://" + u
