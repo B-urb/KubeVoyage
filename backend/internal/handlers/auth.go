@@ -228,8 +228,8 @@ func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
 }
 
 func (h *Handler) setRedirectCookie(redirectUrl string, r *http.Request, w http.ResponseWriter) error {
-	log.Println("Host is: " + r.URL.Host)
-	domain, err := extractMainDomain(r.URL.String())
+	log.Println("Host is: " + r.Host)
+	domain, err := extractMainDomain(redirectUrl)
 	if err != nil {
 		log.Println(err.Error())
 	}
