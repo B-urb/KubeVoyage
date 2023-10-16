@@ -80,12 +80,13 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	domain, err := extractMainDomain(r.URL.String())
 	// Set the token as a cookie
 	http.SetCookie(w, &http.Cookie{
-		Name:     "auth_token",
+		Name:     "X-Auth-Token",
 		Value:    tokenString,
 		Expires:  time.Now().Add(24 * time.Hour),
 		HttpOnly: true,
-		Secure:   true,   // Set this to true if using HTTPS
-		Domain:   domain, // Adjust to your domain
+		Secure:   true,                  // Set this to true if using HTTPS
+		SameSite: http.SameSiteNoneMode, // Set this to true if using HTTPS
+		Domain:   domain,                // Adjust to your domain
 		Path:     "/",
 	})
 	siteURL, err := h.getRedirectFromCookie(r, w)
@@ -203,7 +204,7 @@ func (h *Handler) logError(w http.ResponseWriter, message string, err error, sta
 }
 
 func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
-	cookie, err := r.Cookie("auth_token")
+	cookie, err := r.Cookie("X-Auth-Token")
 	if err != nil {
 		return "", fmt.Errorf("Authentication cookie missing")
 	}
@@ -235,7 +236,7 @@ func (h *Handler) setRedirectCookie(redirectUrl string, r *http.Request, w http.
 	}
 	log.Println(domain)
 	http.SetCookie(w, &http.Cookie{
-		Name:     "auth-site",
+		Name:     "X-Auth-Site",
 		Value:    redirectUrl,
 		Expires:  time.Now().Add(15 * time.Minute), // Shorter duration
 		HttpOnly: true,
@@ -247,7 +248,7 @@ func (h *Handler) setRedirectCookie(redirectUrl string, r *http.Request, w http.
 	return nil
 }
 func (h *Handler) getRedirectFromCookie(r *http.Request, w http.ResponseWriter) (string, error) {
-	cookie, err := r.Cookie("auth-site")
+	cookie, err := r.Cookie("X-Auth-Site")
 	if err != nil {
 		if errors.Is(err, http.ErrNoCookie) {
 			// No cookie found
