@@ -97,6 +97,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Domain:   domain,                // Adjust to your domain
 		Path:     "/",
 	})
+	w.Header().Set("X-Auth-Token", tokenString)
 	http.Redirect(w, r, siteURL, http.StatusSeeOther)
 	// Here, you'd typically generate a JWT or session token and send it back to the client.
 	// For simplicity, we'll just send a success message.
@@ -150,13 +151,16 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	sendJSONSuccess(w, "", http.StatusCreated)
 }
 func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract the user's email from the session or JWT token.
+	printHeaders(r)
+	log.Println(r.RequestURI)
 	siteURL, err := h.getRedirectUrl(r)
 	if err != nil {
-		h.logError(w, err.Error(), nil, http.StatusBadRequest)
-		return
+		log.Println(err.Error())
+		//h.logError(w, err.Error(), nil, http.StatusBadRequest)
+		//return
 	}
 	log.Println(siteURL)
-	// 1. Extract the user's email from the session or JWT token.
 	userEmail, err := h.getUserEmailFromToken(r)
 	if err != nil {
 		// If the user cannot be read from the cookie, redirect to /login with the site URL as a parameter
@@ -231,6 +235,7 @@ func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
 }
 
 func (h *Handler) setRedirectCookie(redirectUrl string, r *http.Request, w http.ResponseWriter) error {
+	w.Header().Set("X-Auth-Site", redirectUrl)
 	log.Println("Host is: " + r.Host)
 	domain, err := extractMainDomain(redirectUrl)
 	if err != nil {
