@@ -77,7 +77,15 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	domain, err := extractMainDomain(r.URL.String())
+	siteURL, err := h.getRedirectFromCookie(r, w)
+	if err != nil {
+		http.Error(w, "Redirect URL missing", http.StatusBadRequest)
+		return
+	}
+	if siteURL == "" {
+		siteURL = r.Host
+	}
+	domain, err := extractMainDomain(siteURL)
 	// Set the token as a cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "X-Auth-Token",
@@ -89,13 +97,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Domain:   domain,                // Adjust to your domain
 		Path:     "/",
 	})
-	siteURL, err := h.getRedirectFromCookie(r, w)
-	if siteURL == "" {
-		http.Error(w, "Redirect URL missing", http.StatusBadRequest)
-		return
-	} else {
-		http.Redirect(w, r, siteURL, http.StatusSeeOther)
-	}
+	http.Redirect(w, r, siteURL, http.StatusSeeOther)
 	// Here, you'd typically generate a JWT or session token and send it back to the client.
 	// For simplicity, we'll just send a success message.
 	_, err = w.Write([]byte("Login successful"))
