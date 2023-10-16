@@ -4,7 +4,7 @@ Embarking on a secure journey in Kubernetes.
 
 `KubeVoyage` is a Kubernetes authentication proxy designed to streamline user access to various sites. Built with a Svelte frontend, a Go backend, and an SQL database, it offers a robust solution for managing user access in a Kubernetes environment.
 
-![KubeVoyage Logo](path_to_logo.png)  <!-- If you have a logo, replace 'path_to_logo.png' with its path -->
+![KubeVoyage Logo](frontend/public/Kubevoyage.png)  <!-- If you have a logo, replace 'path_to_logo.png' with its path -->
 
 ## Features
 
