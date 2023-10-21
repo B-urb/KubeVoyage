@@ -16,7 +16,7 @@ import (
 
 var db *gorm.DB
 
-var frontendPathLocal = "./public" //./public
+var frontendPathLocal = "../frontend/public" //./public
 
 type loggingResponseWriter struct {
 	http.ResponseWriter
@@ -119,6 +119,9 @@ func setupServer(handle *handlers.Handler) http.Handler {
 	})))
 	mux.Handle("/api/authenticate", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handle.HandleAuthenticate(w, r)
+	})))
+	mux.Handle("/api/redirect", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handle.HandleRedirect(w, r)
 	})))
 	mux.Handle("/api/request", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handle.HandleRequestSite(w, r, db)

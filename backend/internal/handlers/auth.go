@@ -77,14 +77,17 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	siteURL, err := h.getRedirectFromCookie(r, w)
+	siteURL, err := h.getRedirectUrl(r, w)
 	if err != nil {
 		http.Error(w, "Redirect URL missing", http.StatusBadRequest)
 		return
 	}
-	if siteURL == "" {
-		siteURL = r.Host
-	}
+	log.Println(siteURL)
+	h.setRedirectCookie(siteURL, r, w)
+	//if siteURL == "" {
+	//	siteURL = r.Host
+	//}
+	w.Header().Set("X-Auth-Site", siteURL)
 	domain, err := extractMainDomain(siteURL)
 	// Set the token as a cookie
 	http.SetCookie(w, &http.Cookie{
@@ -98,7 +101,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 	})
 	w.Header().Set("X-Auth-Token", tokenString)
-	http.Redirect(w, r, siteURL, http.StatusSeeOther)
+	//http.Redirect(w, r, siteURL, http.StatusSeeOther)
 	// Here, you'd typically generate a JWT or session token and send it back to the client.
 	// For simplicity, we'll just send a success message.
 	_, err = w.Write([]byte("Login successful"))
@@ -147,25 +150,37 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		sendJSONError(w, result.Error.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	sendJSONSuccess(w, "", http.StatusCreated)
+}
+func (h *Handler) HandleRedirect(w http.ResponseWriter, r *http.Request) {
+	//FIXME: Not unchecked redirecting with parameter
+	siteURL, err := h.getRedirectFromCookie(r, w, true)
+	if err != nil {
+
+	}
+	if siteURL == "" {
+		siteURL = r.Host
+	}
+
+	redirect := r.Header.Get("X-Auth-Site")
+	log.Println(redirect)
+	log.Println(siteURL)
+	http.Redirect(w, r, siteURL, http.StatusSeeOther)
+
 }
 func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract the user's email from the session or JWT token.
-	printHeaders(r)
-	log.Println(r.RequestURI)
-	siteURL, err := h.getRedirectUrl(r)
+	siteURL, err := h.getRedirectUrl(r, w)
 	if err != nil {
 		log.Println(err.Error())
 		//h.logError(w, err.Error(), nil, http.StatusBadRequest)
 		//return
 	}
-	log.Println(siteURL)
 	userEmail, err := h.getUserEmailFromToken(r)
 	if err != nil {
 		// If the user cannot be read from the cookie, redirect to /login with the site URL as a parameter
 		h.setRedirectCookie(siteURL, r, w)
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		http.Redirect(w, r, "/login?redirect="+siteURL, http.StatusSeeOther)
 		return
 	}
 
@@ -236,7 +251,6 @@ func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
 
 func (h *Handler) setRedirectCookie(redirectUrl string, r *http.Request, w http.ResponseWriter) error {
 	w.Header().Set("X-Auth-Site", redirectUrl)
-	log.Println("Host is: " + r.Host)
 	domain, err := extractMainDomain(redirectUrl)
 	if err != nil {
 		log.Println(err.Error())
@@ -254,7 +268,7 @@ func (h *Handler) setRedirectCookie(redirectUrl string, r *http.Request, w http.
 	})
 	return nil
 }
-func (h *Handler) getRedirectFromCookie(r *http.Request, w http.ResponseWriter) (string, error) {
+func (h *Handler) getRedirectFromCookie(r *http.Request, w http.ResponseWriter, clear bool) (string, error) {
 	cookie, err := r.Cookie("X-Auth-Site")
 	if err != nil {
 		if errors.Is(err, http.ErrNoCookie) {
@@ -266,7 +280,7 @@ func (h *Handler) getRedirectFromCookie(r *http.Request, w http.ResponseWriter) 
 
 	// Clear the cookie once it's read
 	//http.SetCookie(w, &http.Cookie{
-	//	Name:    "auth-site",
+	//	Name:    "X-Auth-Site",
 	//	Value:   "",
 	//	Expires: time.Unix(0, 0),
 	//	Path:    "/",
@@ -274,17 +288,21 @@ func (h *Handler) getRedirectFromCookie(r *http.Request, w http.ResponseWriter) 
 
 	return cookie.Value, nil
 }
-func (h *Handler) getRedirectUrl(r *http.Request) (string, error) {
+func (h *Handler) getRedirectUrl(r *http.Request, w http.ResponseWriter) (string, error) {
 	// Extract the redirect parameter from the request to get the site URL.
 	printHeaders(r)
 
 	siteURL := r.Header.Get("X-Forwarded-Uri")
 	if siteURL == "" {
-		siteURL = r.Header.Get("Referer")
+		siteURL = r.Header.Get("X-Auth-Site")
 		if siteURL == "" {
 			siteURL = r.URL.Query().Get("redirect")
 			if siteURL == "" {
-				return "", fmt.Errorf("Redirect URL missing from both header and URL parameter")
+				surl, err := h.getRedirectFromCookie(r, w, false)
+				if err != nil {
+					fmt.Errorf("Redirect URL missing from both header and URL parameter")
+				}
+				siteURL = surl
 			}
 		}
 	}
