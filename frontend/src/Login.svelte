@@ -7,20 +7,29 @@
   let message = '';
 
   async function login() {
+    console.log("test1")
     try {
       const response = await fetch('/api/login', {
         method: 'POST',
+        credentials: "include",
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ email, password })
       });
 
-      const data = await response.json();
+      console.log(response)
+
+      //const data = await response.json();
+      console.log("test.2")
 
       if (response.ok) {
+        console.log("test2")
         message = "Login successful!";
-        navigate("/")
+
+        setTimeout(()=> {
+          window.location.href = "/api/redirect"
+        },2000)
         // Optionally, set a token, redirect the user, or perform other actions
         // For example: localStorage.setItem('token', data.token);
       } else {
