@@ -15,11 +15,27 @@ type Site struct {
 type UserSite struct {
 	UserID uint `gorm:"primaryKey"`
 	SiteID uint `gorm:"primaryKey"`
-	State  string
+	State  State
 }
 
 type UserSiteResponse struct {
 	User  string `json:"user"`
 	Site  string `json:"site"`
 	State string `json:"state"`
+}
+
+type State string
+
+const (
+	Requested  State = "requested"
+	Authorized State = "authorized"
+	Declined   State = "declined"
+)
+
+func (s State) IsValid() bool {
+	switch s {
+	case Requested, Authorized, Declined:
+		return true
+	}
+	return false
 }

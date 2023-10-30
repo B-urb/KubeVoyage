@@ -210,17 +210,20 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	var userSite models.UserSite
 	err = h.db.Joins("JOIN users ON users.id = user_sites.user_id").
 		Joins("JOIN sites ON sites.id = user_sites.site_id").
-		Where("users.email = ? AND sites.url = ? AND user_sites.state = ?", userEmail, siteURL, "authorized").
+		Where("users.email = ? AND sites.url = ?", userEmail, siteURL).
 		First(&userSite).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Return 401 if the user is not authorized for the requested siteURL
-			w.WriteHeader(http.StatusUnauthorized)
+			http.Redirect(w, r, "api/request", http.StatusSeeOther)
 			return
 		}
 		h.logError(w, "Database error while checking user authorization", err, http.StatusInternalServerError)
 		return
+	}
+	if userSite.State == models.Requested || userSite.State == models.Declined {
+		w.WriteHeader(http.StatusUnauthorized)
 	}
 	w.WriteHeader(http.StatusOK)
 }
@@ -310,13 +313,17 @@ func (h *Handler) getRedirectUrl(r *http.Request, w http.ResponseWriter) (string
 			if siteURL == "" {
 				surl, err := h.getRedirectFromCookie(r, w, false)
 				if err != nil {
-					fmt.Errorf("Redirect URL missing from both header and URL parameter")
+					return "", fmt.Errorf("Redirect URL missing from both header and URL parameter")
 				}
 				siteURL = surl
 			}
 		}
 	}
-	return siteURL, nil
+	if siteURL == "" {
+		return "", fmt.Errorf("Redirect URL missing from both header and URL parameter")
+	} else {
+		return siteURL, nil
+	}
 }
 func printHeaders(r *http.Request) {
 	for name, values := range r.Header {

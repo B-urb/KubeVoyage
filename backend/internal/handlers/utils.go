@@ -2,7 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/B-Urb/KubeVoyage/internal/models"
+	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"net/url"
@@ -68,4 +71,20 @@ func sendJSONResponse(w http.ResponseWriter, data interface{}, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(data)
+}
+
+func IsUserAdmin(db *gorm.DB, email string) (bool, error) {
+	var user models.User
+
+	// Find the user by email
+	result := db.Where("email = ?", email).First(&user)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return false, errors.New("user not found")
+	}
+	if result.Error != nil {
+		return false, result.Error
+	}
+
+	// Check if the user's role is "admin"
+	return user.Role == "admin", nil
 }
