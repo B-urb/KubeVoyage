@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"github.com/B-Urb/KubeVoyage/internal/models"
 	"gorm.io/gorm"
@@ -10,25 +9,32 @@ import (
 	"time"
 )
 
-func HandleRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
-	var results []models.UserSiteResponse
+type UserSiteResponse struct {
+	User  string `json:"user"`
+	Site  string `json:"site"`
+	State string `json:"state"`
+}
 
-	log.Println("Incoming Request")
+func HandleRequests(w http.ResponseWriter, r *http.Request, db *gorm.DB) {
 	if r.Method != http.MethodGet {
 		sendJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	db.Table("user_sites").
+	var results []UserSiteResponse
+	err := db.Table("user_sites").
 		Select("users.email as user, sites.url as site, user_sites.state as state").
 		Joins("JOIN users ON users.id = user_sites.user_id").
 		Joins("JOIN sites ON sites.id = user_sites.site_id").
-		Scan(&results)
-	w.Header().Set("Content-Type", "application/json")
+		Scan(&results).Error
 
-	// Convert the results to JSON and send the response
-	json.NewEncoder(w).Encode(results)
+	if err != nil {
+		log.Printf("Database error: %v", err)
+		sendJSONError(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
 
+	sendJSONResponse(w, results, http.StatusOK)
 }
 
 func (h *Handler) HandleRequestSite(w http.ResponseWriter, r *http.Request, db *gorm.DB) {

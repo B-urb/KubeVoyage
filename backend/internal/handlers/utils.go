@@ -64,3 +64,8 @@ func sendJSONSuccess(w http.ResponseWriter, message string, status int) {
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(map[string]string{"message": message})
 }
+func sendJSONResponse(w http.ResponseWriter, data interface{}, statusCode int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(data)
+}
