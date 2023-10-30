@@ -46,6 +46,9 @@
             message = "Unexpected error occurred. Please try again later.";
           }
         }
+        else {
+          navigate("/")
+        }
       } else {
         message = data.error || "Login failed!";
       }
