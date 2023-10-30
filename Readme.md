@@ -4,7 +4,7 @@ Embarking on a secure journey in Kubernetes.
 
 `KubeVoyage` is a Kubernetes authentication proxy designed to streamline user access to various sites. Built with a Svelte frontend, a Go backend, and an SQL database, it offers a robust solution for managing user access in a Kubernetes environment.
 
-![KubeVoyage Logo](path_to_logo.png)  <!-- If you have a logo, replace 'path_to_logo.png' with its path -->
+![KubeVoyage Logo](frontend/public/Kubevoyage.png)  <!-- If you have a logo, replace 'path_to_logo.png' with its path -->
 
 ## Features
 
@@ -74,7 +74,8 @@ Visit `http://localhost:8080` in your browser.
 Use the provided Helm chart to deploy `KubeVoyage` to your Kubernetes cluster:
 
 ```bash
-helm install kubevoyage ./path_to_helm_chart
+helm repo add github-burban https://B-urb.github.io/KubeVoyage/
+helm install kubevoyage github-burban/kubevoyage
 ```
 
 ## Testing
@@ -92,4 +93,4 @@ Pull requests are welcome! For major changes, please open an issue first to disc
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

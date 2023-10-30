@@ -1,3 +1,5 @@
 .idea
 *.db
 build
+
+deploy/charts/values-local.yaml

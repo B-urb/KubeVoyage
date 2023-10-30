@@ -15,7 +15,7 @@
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav">
         <li class="nav-item active">
-          <Link class="nav-link" to="/">Login</Link>
+          <Link class="nav-link" to="/login">Login</Link>
         </li>
         <li class="nav-item active">
           <Link class="nav-link" to="/register">Register</Link>

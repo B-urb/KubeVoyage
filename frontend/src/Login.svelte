@@ -1,30 +1,30 @@
 <script>
-
-  import {navigate} from "svelte-routing";
+  import { navigate } from "svelte-routing";
 
   let email = '';
   let password = '';
   let message = '';
+  let isRedirecting = false;
 
   async function login() {
     try {
-      const response = await fetch('http://localhost:8080/api/login', {
+      const response = await fetch('/api/login', {
         method: 'POST',
+        credentials: "include",
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ email, password })
       });
 
-      const data = await response.json();
-
       if (response.ok) {
         message = "Login successful!";
-        navigate("/")
-        // Optionally, set a token, redirect the user, or perform other actions
-        // For example: localStorage.setItem('token', data.token);
+        isRedirecting = true;
+        setTimeout(() => {
+          window.location.href = "/api/redirect";
+        }, 2000);
       } else {
-        message = data.error || "Login failed!";
+        message = response.error || "Login failed!";
       }
     } catch (error) {
       message = "An error occurred: " + error.message;
@@ -35,18 +35,26 @@
 <div class="container mt-5">
   <div class="row justify-content-center">
     <div class="col-md-4">
-      <h2>Login</h2>
-      <form>
-        <div class="mb-3">
-          <label for="email" class="form-label">Email address</label>
-          <input type="email" class="form-control" id="email" bind:value={email}>
+      {#if !isRedirecting}
+        <h2>Login</h2>
+        <form>
+          <div class="mb-3">
+            <label for="email" class="form-label">Email address</label>
+            <input type="email" class="form-control" id="email" bind:value={email}>
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" bind:value={password}>
+          </div>
+          <button type="button" class="btn btn-primary" on:click={login}>Login</button>
+        </form>
+      {:else}
+        <div class="text-center">
+          <span class="sr-only">Loading...</span>
+          <div class="spinner-border" role="status"/>
+          <p class="mt-3">Redirecting, please wait...</p>
         </div>
-        <div class="mb-3">
-          <label for="password" class="form-label">Password</label>
-          <input type="password" class="form-control" id="password" bind:value={password}>
-        </div>
-        <button type="button" class="btn btn-primary" on:click={login}>Login</button>
-      </form>
+      {/if}
     </div>
     <div class="sso-login mt-4">
       <p>Or login with:</p>
@@ -62,6 +70,7 @@
     </div>
   </div>
 </div>
+
 <style>
   .sso-login {
     text-align: center;

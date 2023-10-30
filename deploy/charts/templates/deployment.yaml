@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "kubevoyage.fullname" . }}
+  namespace: {{ .Values.app.namespace}}
   labels:
     app: {{ include "kubevoyage.fullname" . }}
 spec:
@@ -21,6 +22,8 @@ spec:
           ports:
             - containerPort: 8080
           env:
+            - name: BASE_URL
+              value: {{ .Values.additionalEnvVars.baseUrl }}
             - name: DB_TYPE
               value: {{ .Values.database.type }}
             - name: DB_HOST
@@ -34,7 +37,22 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "kubevoyage.fullname" . }}-db-secret
+                  name: {{ include "kubevoyage.fullname" . }}-secret
                   key: db-password
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kubevoyage.fullname" . }}-secret
+                  key: jwt-secret
+            - name: ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kubevoyage.fullname" . }}-secret
+                  key: admin-user
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kubevoyage.fullname" . }}-secret
+                  key: admin-password
 
 

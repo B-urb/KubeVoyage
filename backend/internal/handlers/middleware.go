@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 	"net/http"
 	"net/url"
 )
@@ -16,7 +16,7 @@ func handleUnauthenticated(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, url.QueryEscape(redirectURL), http.StatusSeeOther)
 }
 
-func authenticate(next http.HandlerFunc) http.HandlerFunc {
+func (h *Handler) authenticate(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("auth_token")
 		if err != nil {
@@ -28,7 +28,7 @@ func authenticate(next http.HandlerFunc) http.HandlerFunc {
 		claims := &jwt.MapClaims{}
 
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-			return jwtKey, nil
+			return h.JWTKey, nil
 		})
 
 		if err != nil || !token.Valid {

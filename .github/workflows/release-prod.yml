@@ -41,7 +41,7 @@ jobs:
         run: go get ./...
       - name: Build
         working-directory: backend
-        run: go build -o build/kubevoyage ./cmd/kubevoyage
+        run: GOOS=linux GOARCH=amd64 go build -o build/kubevoyage ./cmd/kubevoyage
       #- name: Test with the Go CLI
       #  run: go test
       - name: Archive production artifacts
@@ -79,7 +79,8 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/kubevoyage:${{ env.BRANCH_NAME }}
 
-  release:
+  helm-release:
+    needs: build-docker
     # depending on default permission settings for your org (contents being read-only or read-write for workloads), you will have to add permissions
     # see: https://docs.github.com/en/actions/security-guides/automatic-token-authentication#modifying-the-permissions-for-the-github_token
     permissions:
@@ -98,6 +99,8 @@ jobs:
 
       - name: Install Helm
         uses: azure/setup-helm@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT }}
 
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.5.0
