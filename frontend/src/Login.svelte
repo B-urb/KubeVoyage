@@ -31,7 +31,7 @@
           if (authResponse.status === 200) {
             setTimeout(() => {
               window.location.href = "/api/redirect";
-            }, 2000);
+            }, 2000); //FIXME Redirect
           } else if (authResponse.status === 401) {
             await fetch('/api/request', {
               method: 'POST',
@@ -82,7 +82,6 @@
       {:else}
         <div class="text-center">
           <div class="spinner-border" role="status">
-            <span class="sr-only">Loading...</span>
           </div>
           <p class="mt-3">Redirecting, please wait...</p>
         </div>

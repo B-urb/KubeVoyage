@@ -63,7 +63,7 @@
     {#each requests as request (request.id)}
       <tr>
         <td>{request.user}</td>
-        <td>{request.site}>
+        <td>{request.site}</td>
         <td>
           <button class="btn btn-success btn-sm" on:click={() => acceptRequest(request)}>Accept</button>
           <button class="btn btn-danger btn-sm" on:click={() => denyRequest(request)}>Deny</button>
