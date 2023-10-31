@@ -89,9 +89,11 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	var domain string
 	if siteUrlErr != nil {
 		// If there was an error getting the redirect URL, use the request's host as the domain
+		log.Println("Site URl could not be determined: " + siteURL)
 		domain = r.Host
 	} else {
 		// If the redirect URL was obtained successfully, extract the main domain
+		h.setRedirectCookie(siteURL, r, w)
 		var err error
 		domain, err = extractMainDomain(siteURL)
 		if err != nil {
@@ -189,7 +191,7 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	userEmail, err := h.getUserEmailFromToken(r)
 	if err != nil {
 		// If the user cannot be read from the cookie, redirect to /login with the site URL as a parameter
-		h.setRedirectCookie(siteURL, r, w)
+		h.setRedirectCookie(siteURL, r, w) //Fixme: improve domain handling
 		http.Redirect(w, r, "/login?redirect="+siteURL, http.StatusSeeOther)
 		return
 	}
@@ -267,8 +269,8 @@ func (h *Handler) setRedirectCookie(redirectUrl string, r *http.Request, w http.
 	domain, err := extractMainDomain(redirectUrl)
 	if err != nil {
 		log.Println(err.Error())
+		log.Println(domain)
 	}
-	log.Println(domain)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "X-Auth-Site",
 		Value:    redirectUrl,
@@ -276,7 +278,7 @@ func (h *Handler) setRedirectCookie(redirectUrl string, r *http.Request, w http.
 		HttpOnly: true,
 		Secure:   true,                  // Set this to true if using HTTPS
 		SameSite: http.SameSiteNoneMode, // Set this to true if using HTTPS
-		Domain:   domain,                // Adjust to your domain
+		Domain:   r.Host,                // Adjust to your domain
 		Path:     "/",
 	})
 	return nil
@@ -303,7 +305,6 @@ func (h *Handler) getRedirectFromCookie(r *http.Request, w http.ResponseWriter, 
 }
 func (h *Handler) getRedirectUrl(r *http.Request, w http.ResponseWriter) (string, error) {
 	// Extract the redirect parameter from the request to get the site URL.
-	printHeaders(r)
 
 	siteURL := r.Header.Get("X-Forwarded-Uri")
 	if siteURL == "" {

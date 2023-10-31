@@ -59,7 +59,11 @@ func (h *Handler) HandleRequestSite(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	siteURL := r.URL.Query().Get("redirect")
+	siteURL, err := h.getRedirectUrl(r, w)
+	if err != nil {
+		http.Error(w, "Request URL not found", http.StatusNotFound)
+		return
+	}
 
 	// Check if site already exists
 	var site models.Site
