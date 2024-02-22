@@ -17,46 +17,47 @@ jobs:
         go-version: [ '1.21' ]
         node-version: [ 18 ]
         goarch: [ 'amd64', 'arm64' ]  # Define architectures here
-      steps:
-        - name: Checkout code
-          uses: actions/checkout@v3
-        - name: Setup Go ${{ matrix.go-version }}
-          uses: actions/setup-go@v4
-          with:
-            go-version: ${{ matrix.go-version }}
-        - name: Setup Node.js
-          uses: actions/setup-node@v3
-          with:
-            node-version: ${{ matrix.node-version }}
-        - name: Cache node modules
-          uses: actions/cache@v3
-          with:
-            path: ~/.npm
-            key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-            restore-keys: |
-              ${{ runner.os }}-node-
-        - name: Install dependencies
-          working-directory: frontend
-          run: npm ci
-        - name: Build
-          working-directory: frontend
-          run: npm run build
-        - name: Install dependencies
-          working-directory: backend
-          run: go get ./...
-        - name: Build
-          working-directory: backend
-          run: |
-            GOOS=linux GOARCH=${{ matrix.goarch }} go build -o build/kubevoyage-${{ matrix.goarch }} ./cmd/kubevoyage
-        #- name: Test with the Go CLI
-        #  run: go test
-        - name: Archive production artifacts
-          uses: actions/upload-artifact@v3
-          with:
-            name: production-artifacts
-            path: |
-              backend/
-              frontend/public
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+      - name: Install dependencies
+        working-directory: backend
+        run: go get ./...
+      - name: Build
+        working-directory: backend
+        run: |
+          GOOS=linux GOARCH=${{ matrix.goarch }} go build -o build/kubevoyage-${{ matrix.goarch }} ./cmd/kubevoyage
+      #- name: Test with the Go CLI
+      #  run: go test
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-artifacts
+          path: |
+            backend/
+            frontend/public
+
     build-docker:
       needs: build
       runs-on: ubuntu-latest
@@ -68,17 +69,17 @@ jobs:
         BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
       steps:
         - name: Checkout code
-          uses: actions/checkout@v3
+          uses: actions/checkout@v4
         - name: Download build artifact
-          uses: actions/download-artifact@v3
+          uses: actions/download-artifact@v4
           with:
             name: production-artifacts
 
         - name: Set up Docker Build
-          uses: docker/setup-buildx-action@v2
+          uses: docker/setup-buildx-action@v3
 
         - name: Login to Docker Registry
-          uses: docker/login-action@v2
+          uses: docker/login-action@v3
           with:
             username: ${{ secrets.DOCKERHUB_USERNAME }}
             password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -100,7 +101,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -110,12 +111,12 @@ jobs:
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Install Helm
-        uses: azure/setup-helm@v3
+        uses: azure/setup-helm@v4
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
 
       - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.5.0
+        uses: helm/chart-releaser-action@v1.6.0
         with:
           charts_dir: deploy/charts
         env:
