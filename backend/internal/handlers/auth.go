@@ -36,6 +36,13 @@ func NewHandler(db *gorm.DB) *Handler {
 	return &Handler{db: db, JWTKey: []byte(jwtKey), BaseURL: baseURL}
 }
 
+type LoginResponse struct {
+	Success     bool   `json:"success"`
+	Message     string `json:"message"`
+	Redirect    bool   `json:"redirect"`
+	RedirectURL string `json:"redirect_url,omitempty"`
+}
+
 func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	var inputUser models.User
 	var dbUser models.User
@@ -74,21 +81,27 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	// Sign and get the complete encoded token as a string using the secret
 	tokenString, err := token.SignedString(h.JWTKey)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		sendJSONError(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	siteURL, err := h.getRedirectUrl(r, w)
-	if err != nil {
-		http.Error(w, "Redirect URL missing", http.StatusBadRequest)
-		return
+
+	siteURL, siteUrlErr := h.getRedirectUrl(r, w)
+	var domain string
+	if siteUrlErr != nil {
+		// If there was an error getting the redirect URL, use the request's host as the domain
+		log.Println("Site URl could not be determined: " + siteURL)
+		domain = r.Host
+	} else {
+		// If the redirect URL was obtained successfully, extract the main domain
+		h.setRedirectCookie(siteURL, r, w)
+		var err error
+		domain, err = extractMainDomain(siteURL)
+		if err != nil {
+			sendJSONError(w, "Invalid Redirect URL", http.StatusBadRequest)
+			return
+		}
 	}
-	log.Println(siteURL)
-	h.setRedirectCookie(siteURL, r, w)
-	//if siteURL == "" {
-	//	siteURL = r.Host
-	//}
-	w.Header().Set("X-Auth-Site", siteURL)
-	domain, err := extractMainDomain(siteURL)
+
 	// Set the token as a cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "X-Auth-Token",
@@ -100,14 +113,13 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Domain:   domain,                // Adjust to your domain
 		Path:     "/",
 	})
-	w.Header().Set("X-Auth-Token", tokenString)
-	//http.Redirect(w, r, siteURL, http.StatusSeeOther)
-	// Here, you'd typically generate a JWT or session token and send it back to the client.
-	// For simplicity, we'll just send a success message.
-	_, err = w.Write([]byte("Login successful"))
-	if err != nil {
-		return
+
+	response := LoginResponse{
+		Success:  true,
+		Message:  "Login successful",
+		Redirect: siteURL != "" && siteUrlErr == nil,
 	}
+	sendJSONResponse(w, response, http.StatusOK)
 }
 
 func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
@@ -179,7 +191,7 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	userEmail, err := h.getUserEmailFromToken(r)
 	if err != nil {
 		// If the user cannot be read from the cookie, redirect to /login with the site URL as a parameter
-		h.setRedirectCookie(siteURL, r, w)
+		h.setRedirectCookie(siteURL, r, w) //Fixme: improve domain handling
 		http.Redirect(w, r, "/login?redirect="+siteURL, http.StatusSeeOther)
 		return
 	}
@@ -200,17 +212,20 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	var userSite models.UserSite
 	err = h.db.Joins("JOIN users ON users.id = user_sites.user_id").
 		Joins("JOIN sites ON sites.id = user_sites.site_id").
-		Where("users.email = ? AND sites.url = ? AND user_sites.state = ?", userEmail, siteURL, "authorized").
+		Where("users.email = ? AND sites.url = ?", userEmail, siteURL).
 		First(&userSite).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Return 401 if the user is not authorized for the requested siteURL
-			w.WriteHeader(http.StatusUnauthorized)
+			http.Redirect(w, r, "api/request", http.StatusSeeOther)
 			return
 		}
 		h.logError(w, "Database error while checking user authorization", err, http.StatusInternalServerError)
 		return
+	}
+	if userSite.State == models.Requested || userSite.State == models.Declined {
+		w.WriteHeader(http.StatusUnauthorized)
 	}
 	w.WriteHeader(http.StatusOK)
 }
@@ -254,8 +269,8 @@ func (h *Handler) setRedirectCookie(redirectUrl string, r *http.Request, w http.
 	domain, err := extractMainDomain(redirectUrl)
 	if err != nil {
 		log.Println(err.Error())
+		log.Println(domain)
 	}
-	log.Println(domain)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "X-Auth-Site",
 		Value:    redirectUrl,
@@ -263,7 +278,7 @@ func (h *Handler) setRedirectCookie(redirectUrl string, r *http.Request, w http.
 		HttpOnly: true,
 		Secure:   true,                  // Set this to true if using HTTPS
 		SameSite: http.SameSiteNoneMode, // Set this to true if using HTTPS
-		Domain:   domain,                // Adjust to your domain
+		Domain:   r.Host,                // Adjust to your domain
 		Path:     "/",
 	})
 	return nil
@@ -290,7 +305,6 @@ func (h *Handler) getRedirectFromCookie(r *http.Request, w http.ResponseWriter, 
 }
 func (h *Handler) getRedirectUrl(r *http.Request, w http.ResponseWriter) (string, error) {
 	// Extract the redirect parameter from the request to get the site URL.
-	printHeaders(r)
 
 	siteURL := r.Header.Get("X-Forwarded-Uri")
 	if siteURL == "" {
@@ -300,13 +314,17 @@ func (h *Handler) getRedirectUrl(r *http.Request, w http.ResponseWriter) (string
 			if siteURL == "" {
 				surl, err := h.getRedirectFromCookie(r, w, false)
 				if err != nil {
-					fmt.Errorf("Redirect URL missing from both header and URL parameter")
+					return "", fmt.Errorf("Redirect URL missing from both header and URL parameter")
 				}
 				siteURL = surl
 			}
 		}
 	}
-	return siteURL, nil
+	if siteURL == "" {
+		return "", fmt.Errorf("Redirect URL missing from both header and URL parameter")
+	} else {
+		return siteURL, nil
+	}
 }
 func printHeaders(r *http.Request) {
 	for name, values := range r.Header {

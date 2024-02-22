@@ -69,12 +69,12 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 
-	mux := setupServer(handler)
+	mux := setupServer(handler, app.DB)
 
 	log.Println("Starting server on :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
-func setupServer(handle *handlers.Handler) http.Handler {
+func setupServer(handle *handlers.Handler, db *gorm.DB) http.Handler {
 	mux := http.NewServeMux()
 
 	handler := cors.Default().Handler(mux)
@@ -109,7 +109,10 @@ func setupServer(handle *handlers.Handler) http.Handler {
 	})))
 
 	mux.Handle("/api/requests", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handlers.HandleRequests(w, r, db)
+		handle.HandleRequests(w, r)
+	})))
+	mux.Handle("/api/requests/update", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handle.HandleUpdateSiteState(w, r)
 	})))
 	mux.Handle("/api/register", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handle.HandleRegister(w, r)
@@ -124,7 +127,7 @@ func setupServer(handle *handlers.Handler) http.Handler {
 		handle.HandleRedirect(w, r)
 	})))
 	mux.Handle("/api/request", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handle.HandleRequestSite(w, r, db)
+		handle.HandleRequestSite(w, r)
 	})))
 
 	return handler

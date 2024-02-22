@@ -17,18 +17,49 @@
         body: JSON.stringify({ email, password })
       });
 
+      const data = await response.json();
+
       if (response.ok) {
         message = "Login successful!";
-        isRedirecting = true;
-        setTimeout(() => {
-          window.location.href = "/api/redirect";
-        }, 2000);
+        if (data.redirect) {
+          isRedirecting = true;
+          const authResponse = await fetch('/api/authenticate', {
+            method: 'GET',
+            credentials: 'include'
+          });
+
+          if (authResponse.status === 200) {
+            setTimeout(() => {
+              window.location.href = "/api/redirect";
+            }, 2000); //FIXME Redirect
+          } else if (authResponse.status === 401) {
+            await fetch('/api/request', {
+              method: 'POST',
+              credentials: 'include',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ email })
+            });
+            message = "Access request sent. Please wait for approval.";
+          } else {
+            message = "Unexpected error occurred. Please try again later.";
+          }
+        }
+        else {
+          navigate("/")
+        }
       } else {
-        message = response.error || "Login failed!";
+        message = data.error || "Login failed!";
       }
     } catch (error) {
       message = "An error occurred: " + error.message;
     }
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    login();
   }
 </script>
 
@@ -37,7 +68,7 @@
     <div class="col-md-4">
       {#if !isRedirecting}
         <h2>Login</h2>
-        <form>
+        <form on:submit={handleSubmit}>
           <div class="mb-3">
             <label for="email" class="form-label">Email address</label>
             <input type="email" class="form-control" id="email" bind:value={email}>
@@ -46,12 +77,12 @@
             <label for="password" class="form-label">Password</label>
             <input type="password" class="form-control" id="password" bind:value={password}>
           </div>
-          <button type="button" class="btn btn-primary" on:click={login}>Login</button>
+          <button type="submit" class="btn btn-primary">Login</button>
         </form>
       {:else}
         <div class="text-center">
-          <span class="sr-only">Loading...</span>
-          <div class="spinner-border" role="status"/>
+          <div class="spinner-border" role="status">
+          </div>
           <p class="mt-3">Redirecting, please wait...</p>
         </div>
       {/if}
