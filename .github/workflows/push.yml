@@ -53,7 +53,7 @@ jobs:
       - name: Build
         working-directory: backend
         run: |
-          GOOS=linux GOARCH=${{ matrix.goarch }} go build -o build/kubevoyage-${{ matrix.goarch }} ./cmd/kubevoyage
+          GOOS=linux CGO_ENABLED=1 GOARCH=${{ matrix.goarch }} go build -o build/kubevoyage-${{ matrix.goarch }} ./cmd/kubevoyage
       #- name: Test with the Go CLI
       #  run: go test
       - name: Archive production artifacts
