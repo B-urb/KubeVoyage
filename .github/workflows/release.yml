@@ -44,10 +44,13 @@ jobs:
       - name: Install dependencies
         working-directory: backend
         run: go get ./...
+      - name: Set up CC for cross-compilation
+        if: matrix.goarch == 'arm64'
+        run: echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
       - name: Build
         working-directory: backend
         run: |
-          GOOS=linux CGO_ENABLED=1 GOARCH=${{ matrix.goarch }} go build -o build/kubevoyage-${{ matrix.goarch }} ./cmd/kubevoyage
+          GOOS=linux  GOARCH=${{ matrix.goarch }} CGO_ENABLED=1 go build -o build/kubevoyage-${{ matrix.goarch }} ./cmd/kubevoyage
       #- name: Test with the Go CLI
       #  run: go test
       - name: Archive production artifacts
