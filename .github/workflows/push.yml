@@ -20,7 +20,7 @@ jobs:
     environment: development
     strategy:
       matrix:
-        go-version: [ '1.21' ]
+        go-version: [ '1.22' ]
         node-version: [ 18 ]
         goarch: [ 'amd64', 'arm64' ]  # Define architectures here
     steps:
