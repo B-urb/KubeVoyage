@@ -41,6 +41,8 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
+      - name: Install ARM64 cross-compiler
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
       - name: Install dependencies
         working-directory: backend
         run: go get ./...
