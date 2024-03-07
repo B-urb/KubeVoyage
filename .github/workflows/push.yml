@@ -71,7 +71,7 @@ jobs:
   build-docker:
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ github.ref }} != 'master' && ${{ github.ref }} != 'development'
+    if: ${{ github.ref }} == 'master' || ${{ github.ref }} == 'development'
     env:
       BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
     steps:
