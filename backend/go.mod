@@ -3,7 +3,7 @@ module github.com/B-Urb/KubeVoyage
 go 1.21
 
 require (
-	github.com/golang-jwt/jwt/v5 v5.2.0
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/rs/cors v1.10.1
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/crypto v0.21.0
