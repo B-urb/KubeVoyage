@@ -14,8 +14,6 @@ import (
 	// or "gorm.io/driver/postgres" for PostgreSQL
 )
 
-var db *gorm.DB
-
 var frontendPathLocal = "./public" //"../frontend/public"
 
 type loggingResponseWriter struct {
