@@ -68,13 +68,14 @@ func main() {
 	mux := setupServer(handler)
 
 	log.Println("Starting server on :8080")
-	log.Fatal(http.ListenAndServe("localhost:8080", mux))
+	log.Fatal(http.ListenAndServe(":8080", mux))
 }
 func setupServer(handle *handlers.Handler) http.Handler {
 	mux := http.NewServeMux()
 
 	handler := cors.Default().Handler(mux)
 	frontendPathLocal, _ := util.GetEnvOrDefault("FRONTEND_PATH", "./public")
+	log.Printf("Serving frontend from %s", frontendPathLocal)
 
 	// Serve static files
 	fs := http.FileServer(http.Dir(frontendPathLocal)) // Adjust the path based on your directory structure
