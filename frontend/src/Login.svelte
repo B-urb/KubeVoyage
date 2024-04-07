@@ -8,7 +8,9 @@
 
   async function login() {
     try {
-      const response = await fetch('/api/login', {
+      const params = new URLSearchParams(window.location.search);
+      const redirectUrl = params.get('redirect'); //
+      const response = await fetch(`/api/login?redirect=${encodeURIComponent(redirectUrl)}`, {
         method: 'POST',
         credentials: "include",
         headers: {

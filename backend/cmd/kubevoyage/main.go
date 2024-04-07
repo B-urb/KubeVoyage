@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/B-Urb/KubeVoyage/internal/app"
 	"github.com/B-Urb/KubeVoyage/internal/handlers"
+	"github.com/B-Urb/KubeVoyage/internal/util"
 	"github.com/rs/cors"
-	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"os"
@@ -13,10 +13,6 @@ import (
 	"time"
 	// or "gorm.io/driver/postgres" for PostgreSQL
 )
-
-var db *gorm.DB
-
-var frontendPathLocal = "./public" //"../frontend/public"
 
 type loggingResponseWriter struct {
 	http.ResponseWriter
@@ -69,15 +65,17 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 
-	mux := setupServer(handler, app.DB)
+	mux := setupServer(handler)
 
 	log.Println("Starting server on :8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
-func setupServer(handle *handlers.Handler, db *gorm.DB) http.Handler {
+func setupServer(handle *handlers.Handler) http.Handler {
 	mux := http.NewServeMux()
 
 	handler := cors.Default().Handler(mux)
+	frontendPathLocal, _ := util.GetEnvOrDefault("FRONTEND_PATH", "./public")
+	log.Printf("Serving frontend from %s", frontendPathLocal)
 
 	// Serve static files
 	fs := http.FileServer(http.Dir(frontendPathLocal)) // Adjust the path based on your directory structure

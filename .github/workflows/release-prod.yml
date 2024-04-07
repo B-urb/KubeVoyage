@@ -109,7 +109,7 @@ jobs:
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Install Helm
-        uses: azure/setup-helm@v4.0.0
+        uses: azure/setup-helm@v4.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
 

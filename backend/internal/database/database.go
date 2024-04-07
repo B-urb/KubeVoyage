@@ -48,10 +48,10 @@ func InitializeDatabase() (*gorm.DB, error) {
 
 		if dbType == "mysql" {
 			dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local", dbUser, dbPassword, dbHost, dbPort, dbName)
-			db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+			db, _ = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 		} else {
 			dsn = fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable", dbHost, dbPort, dbUser, dbName, dbPassword)
-			db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+			db, _ = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 		}
 
 	case "sqlite":
@@ -59,11 +59,11 @@ func InitializeDatabase() (*gorm.DB, error) {
 		db, err = gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 
 	default:
-		return nil, fmt.Errorf("Unsupported DB_TYPE: %s", dbType)
+		return nil, fmt.Errorf("unsupported DB_TYPE: %s", dbType)
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to connect to database: %v", err)
+		return nil, fmt.Errorf("failed to connect to database: %v", err)
 	}
 
 	return db, nil

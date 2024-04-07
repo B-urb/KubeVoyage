@@ -7,7 +7,7 @@ on:
       - development
   pull_request:
     branches:
-      - '*'
+      - 'master'
 
 env:
   CI: true
@@ -71,7 +71,7 @@ jobs:
   build-docker:
     needs: build
     runs-on: ubuntu-latest
-    if: ${{ github.ref }} != 'master' && ${{ github.ref }} != 'development'
+    if: ${{ github.ref }} == 'master' || ${{ github.ref }} == 'development'
     env:
       BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
     steps:
@@ -139,7 +139,7 @@ jobs:
           git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       - name: Install Helm
-        uses: azure/setup-helm@v4.0.0
+        uses: azure/setup-helm@v4.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
 
