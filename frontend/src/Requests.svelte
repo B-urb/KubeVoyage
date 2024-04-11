@@ -9,7 +9,10 @@
 
   async function fetchRequests() {
     try {
-      const response = await fetch('/api/requests');
+      const response = await fetch('/api/requests',
+          {
+            credentials: "include"
+          });
       if (response.ok) {
         requests = await response.json();
       } else {
