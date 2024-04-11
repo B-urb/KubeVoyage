@@ -1,6 +1,16 @@
 <script>
   import { onMount } from 'svelte';
   let redirectURL = '';
+  function getCookie(name) {
+    let cookieArray = document.cookie.split(';');
+    for (let i = 0; i < cookieArray.length; i++) {
+      let cookiePair = cookieArray[i].split('=');
+      if (name === cookiePair[0].trim()) {
+        return decodeURIComponent(cookiePair[1]);
+      }
+    }
+    return null;
+  }
 
   onMount(() => {
     // Extract the redirect URL from the query parameters
@@ -27,6 +37,6 @@
 
 <div class="container mt-5">
   <h3>Request Access</h3>
-  <p>You are trying to access: <strong>{redirectURL}</strong></p>
+  <p>You are trying to access: <strong>{getCookie('X-Auth-Site')}</strong></p>
   <button class="btn btn-primary" on:click={requestAccess}>Request Access</button>
 </div>
