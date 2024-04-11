@@ -218,7 +218,7 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			// Return 401 if the user is not authorized for the requested siteURL
-			http.Redirect(w, r, "api/request", http.StatusSeeOther)
+			http.Redirect(w, r, "/request", http.StatusSeeOther)
 			return
 		}
 		h.logError(w, "Database error while checking user authorization", err, http.StatusInternalServerError)
