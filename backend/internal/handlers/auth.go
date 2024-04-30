@@ -15,6 +15,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -242,6 +243,7 @@ func (h *Handler) logError(w http.ResponseWriter, message string, err error, sta
 }
 
 func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
+	logCookies(r)
 	cookie, err := r.Cookie("X-Auth-Token")
 	if err != nil {
 		slog.Error("Authentication Cookie missing", err)
@@ -328,6 +330,22 @@ func (h *Handler) getRedirectUrl(r *http.Request, w http.ResponseWriter) (string
 	} else {
 		return siteURL, nil
 	}
+}
+func logCookies(r *http.Request) {
+	cookies := r.Cookies() // Step 1: Retrieve all cookies
+	var cookieStrings []string
+
+	for _, cookie := range cookies {
+		// Step 2: Format each cookie as a string
+		cookieStr := fmt.Sprintf("%s=%s", cookie.Name, cookie.Value)
+		cookieStrings = append(cookieStrings, cookieStr)
+	}
+
+	// Join all cookie strings into a single string
+	allCookies := strings.Join(cookieStrings, "; ")
+
+	// Step 3: Log the complete cookie string
+	slog.Info("Cookies:", allCookies)
 }
 func printHeaders(r *http.Request) {
 	for name, values := range r.Header {
