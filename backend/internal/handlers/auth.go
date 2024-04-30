@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/B-Urb/KubeVoyage/internal/models"
 	"github.com/B-Urb/KubeVoyage/internal/util"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/gorilla/sessions"
 	"golang.org/x/crypto/scrypt"
 	"gorm.io/gorm"
 	"log"
@@ -24,6 +26,8 @@ type Handler struct {
 	JWTKey  []byte
 	BaseURL string
 }
+
+var store = sessions.NewCookieStore([]byte("your-very-secret-key"))
 
 func NewHandler(db *gorm.DB) *Handler {
 	jwtKey, err := util.GetEnvOrError("JWT_SECRET_KEY")
@@ -86,6 +90,14 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		sendJSONError(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+	session, _ := store.Get(r, "session-cook")
+
+	// Simulate user authentication
+	session.Values["authenticated"] = true
+	session.Values["user"] = inputUser.Email
+	session.Save(r, w)
+
+	fmt.Fprintln(w, "Authenticated session:", session.ID)
 
 	var domain string
 	siteURL, siteUrlErr := h.getRedirectUrl(r, w)
@@ -193,17 +205,41 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		//h.logError(w, err.Error(), nil, http.StatusBadRequest)
 		//return
 	}
-	userEmail, err := h.getUserEmailFromToken(r)
-	if err != nil {
+	session, err := store.Get(r, "session-cook")
+	// Check if "authenticated" is set and true in the session
+	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+		session, _ := store.Get(r, "session-cook")
+		session.Options = &sessions.Options{
+			Path:     "/",                   // Available across the entire domain
+			MaxAge:   3600,                  // Expires after 1 hour
+			HttpOnly: true,                  // Not accessible via JavaScript
+			Secure:   true,                  // Only sent over HTTPS
+			SameSite: http.SameSiteNoneMode, // Controls cross-site request behavior
+		}
+
+		// Generate a new random session ID
+		session.ID = generateSessionID()
+
+		// Set some initial values
+		session.Values["authenticated"] = false
+		session.Save(r, w)
+
+		fmt.Fprintln(w, "Session created:", session.ID)
 		// If the user cannot be read from the cookie, redirect to /login with the site URL as a parameter
 		h.setRedirectCookie(siteURL, r, w) //Fixme: improve domain handling
 		http.Redirect(w, r, "/login?redirect="+siteURL, http.StatusSeeOther)
 		return
 	}
 
+	sessionUser, ok := session.Values["user"].(bool)
+	if !ok {
+		h.logError(w, "error while fetching user details from session", err, http.StatusInternalServerError)
+		return
+	}
+
 	// Check if the user has the role "admin"
 	var user models.User
-	err = h.db.Where("email = ?", userEmail).First(&user).Error
+	err = h.db.Where("email = ?", sessionUser).First(&user).Error
 	if err != nil {
 		h.logError(w, "Database error while fetching user details", err, http.StatusInternalServerError)
 		return
@@ -217,7 +253,7 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	var userSite models.UserSite
 	err = h.db.Joins("JOIN users ON users.id = user_sites.user_id").
 		Joins("JOIN sites ON sites.id = user_sites.site_id").
-		Where("users.email = ? AND sites.url = ?", userEmail, siteURL).
+		Where("users.email = ? AND sites.url = ?", sessionUser, siteURL).
 		First(&userSite).Error
 
 	if err != nil {
@@ -332,6 +368,17 @@ func (h *Handler) getRedirectUrl(r *http.Request, w http.ResponseWriter) (string
 	} else {
 		return siteURL, nil
 	}
+}
+
+// generateSessionID generates a secure, random session ID.
+func generateSessionID() string {
+	size := 32 // This size can be adjusted according to your security needs
+	bytes := make([]byte, size)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		log.Fatalf("Failed to generate random session ID: %v", err)
+	}
+	return hex.EncodeToString(bytes)
 }
 func logCookies(r *http.Request) {
 	cookies := r.Cookies() // Step 1: Retrieve all cookies
