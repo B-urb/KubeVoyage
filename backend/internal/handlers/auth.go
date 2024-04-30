@@ -87,20 +87,22 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var domain string
 	siteURL, siteUrlErr := h.getRedirectUrl(r, w)
 	if siteUrlErr != nil {
 		// If there was an error getting the redirect URL, use the request's host as the domain
 		log.Println("Site URl could not be determined: " + siteURL)
+		domain = r.Host
 	} else {
 		// If the redirect URL was obtained successfully, extract the main domain
 		h.setRedirectCookie(siteURL, r, w)
 		var err error
+		domain, err = extractMainDomain(r.Host)
 		if err != nil {
 			sendJSONError(w, "Invalid Redirect URL", http.StatusBadRequest)
 			return
 		}
 	}
-	domain, err := extractMainDomain(r.Host)
 	if err != nil {
 		slog.Error("could not extract Main Domain", err)
 		return
