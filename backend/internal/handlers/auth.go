@@ -13,6 +13,7 @@ import (
 	"golang.org/x/crypto/scrypt"
 	"gorm.io/gorm"
 	"log"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -86,16 +87,13 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	siteURL, siteUrlErr := h.getRedirectUrl(r, w)
-	var domain string
 	if siteUrlErr != nil {
 		// If there was an error getting the redirect URL, use the request's host as the domain
 		log.Println("Site URl could not be determined: " + siteURL)
-		domain = r.Host
 	} else {
 		// If the redirect URL was obtained successfully, extract the main domain
 		h.setRedirectCookie(siteURL, r, w)
 		var err error
-		domain, err = extractMainDomain(siteURL)
 		if err != nil {
 			sendJSONError(w, "Invalid Redirect URL", http.StatusBadRequest)
 			return
@@ -110,7 +108,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   true,                  // Set this to true if using HTTPS
 		SameSite: http.SameSiteNoneMode, // Set this to true if using HTTPS
-		Domain:   domain,                // Adjust to your domain
+		Domain:   r.Host,                // Adjust to your domain
 		Path:     "/",
 	})
 
@@ -242,6 +240,7 @@ func (h *Handler) logError(w http.ResponseWriter, message string, err error, sta
 func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
 	cookie, err := r.Cookie("X-Auth-Token")
 	if err != nil {
+		slog.Error("Authentication Cookie missing")
 		return "", fmt.Errorf("Authentication cookie missing")
 	}
 
