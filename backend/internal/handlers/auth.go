@@ -107,6 +107,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		slog.Error("could not extract Main Domain", err)
 		return
 	}
+	slog.Info("Domain: ", domain)
 	// Set the token as a cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "X-Auth-Token",
@@ -114,7 +115,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Expires:  time.Now().Add(24 * time.Hour),
 		Secure:   true,                  // Set this to true if using HTTPS
 		SameSite: http.SameSiteNoneMode, // Set this to true if using HTTPS
-		Domain:   domain,                // Adjust to your domain
+		Domain:   r.Host,                // Adjust to your domain
 		Path:     "/",
 	})
 
