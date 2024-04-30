@@ -112,7 +112,6 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Name:     "X-Auth-Token",
 		Value:    tokenString,
 		Expires:  time.Now().Add(24 * time.Hour),
-		HttpOnly: true,
 		Secure:   true,                  // Set this to true if using HTTPS
 		SameSite: http.SameSiteNoneMode, // Set this to true if using HTTPS
 		Domain:   domain,                // Adjust to your domain
