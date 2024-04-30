@@ -238,16 +238,13 @@ func (h *Handler) logError(w http.ResponseWriter, message string, err error, sta
 }
 
 func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
-	cookie, err := r.Cookie("X-Auth-Token")
-	if err != nil {
-		slog.Error("Authentication Cookie missing")
-		return "", fmt.Errorf("Authentication cookie missing")
-	}
+	cookie := r.Header.Get("X-Auth-Token")
+	slog.Info("Token:", cookie)
 
-	tokenStr := cookie.Value
+	tokenStr := cookie
 	claims := &jwt.MapClaims{}
 
-	_, err = jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+	_, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 		return h.JWTKey, nil
 	})
 
