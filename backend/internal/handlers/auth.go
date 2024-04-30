@@ -205,17 +205,23 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	logCookies(r)
 	session, err := store.Get(r, "session-cook")
 	// Check if "authenticated" is set and true in the session
-	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+	auth, ok := session.Values["authenticated"].(bool)
+	slog.Info("auth ?:", auth)
+	slog.Info("ok: ", ok)
+	if !ok || !auth {
 		session.Options = &sessions.Options{
 			Path:     "/",                   // Available across the entire domain
 			MaxAge:   3600,                  // Expires after 1 hour
 			HttpOnly: true,                  // Not accessible via JavaScript
 			Secure:   true,                  // Only sent over HTTPS
 			SameSite: http.SameSiteNoneMode, // Controls cross-site request behavior
+			Domain:   r.Host,
 		}
 
 		// Generate a new random session ID
 		session.ID = generateSessionID()
+		//TODO: check why this always gets executed
+		//TODO: check if login reuses session or creates new
 
 		// Set some initial values
 		session.Values["authenticated"] = false
