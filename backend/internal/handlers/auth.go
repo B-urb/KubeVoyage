@@ -91,6 +91,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	session, _ := store.Get(r, "session-cook")
+	slog.Info("New?: ", session.IsNew)
 	session.Values["authenticated"] = true
 	session.Values["user"] = inputUser.Email
 	session.Save(r, w)
@@ -230,6 +231,19 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
+		session.Options = &sessions.Options{
+			Path:     "/",                   // Available across the entire domain
+			MaxAge:   3600,                  // Expires after 1 hour
+			HttpOnly: true,                  // Not accessible via JavaScript
+			Secure:   true,                  // Only sent over HTTPS
+			SameSite: http.SameSiteNoneMode, // Controls cross-site request behavior
+			Domain:   r.Host,
+		}
+		if err := session.Save(r, w); err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
 		slog.Info("created new session with id", session.ID)
 
 		// If the user cannot be read from the cookie, redirect to /login with the site URL as a parameter
@@ -239,7 +253,6 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("Incoming session is authenticated")
 	sessionUser, ok := session.Values["user"].(string)
-	session.Save(r, w)
 	slog.Info(sessionUser)
 	if !ok {
 		h.logError(w, "error while fetching user details from session", err, http.StatusInternalServerError)
