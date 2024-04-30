@@ -91,8 +91,6 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	session, _ := store.Get(r, "session-cook")
-
-	// Simulate user authentication
 	session.Values["authenticated"] = true
 	session.Values["user"] = inputUser.Email
 	session.Save(r, w)
@@ -204,6 +202,7 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		//h.logError(w, err.Error(), nil, http.StatusBadRequest)
 		//return
 	}
+	logCookies(r)
 	session, err := store.Get(r, "session-cook")
 	// Check if "authenticated" is set and true in the session
 	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
