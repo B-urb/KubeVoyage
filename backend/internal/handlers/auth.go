@@ -85,7 +85,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// Sign and get the complete encoded token as a string using the secret
-	tokenString, err := token.SignedString(h.JWTKey)
+	_, err = token.SignedString(h.JWTKey)
 	if err != nil {
 		sendJSONError(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -118,15 +118,15 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("Domain: ", domain)
 	// Set the token as a cookie
-	http.SetCookie(w, &http.Cookie{
-		Name:     "X-Auth-Token",
-		Value:    tokenString,
-		Expires:  time.Now().Add(24 * time.Hour),
-		Secure:   true,                  // Set this to true if using HTTPS
-		SameSite: http.SameSiteNoneMode, // Set this to true if using HTTPS
-		Domain:   r.Host,                // Adjust to your domain
-		Path:     "/",
-	})
+	//http.SetCookie(w, &http.Cookie{
+	//	Name:     "X-Auth-Token",
+	//	Value:    tokenString,
+	//	Expires:  time.Now().Add(24 * time.Hour),
+	//	Secure:   true,                  // Set this to true if using HTTPS
+	//	SameSite: http.SameSiteNoneMode, // Set this to true if using HTTPS
+	//	Domain:   r.Host,                // Adjust to your domain
+	//	Path:     "/",
+	//})
 
 	response := LoginResponse{
 		Success:  true,
@@ -202,6 +202,7 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		//h.logError(w, err.Error(), nil, http.StatusBadRequest)
 		//return
 	}
+	tld, err := extractMainDomain(siteURL)
 	logCookies(r)
 	session, err := store.Get(r, "session-cook")
 	// Check if "authenticated" is set and true in the session
@@ -215,7 +216,7 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 			HttpOnly: true,                  // Not accessible via JavaScript
 			Secure:   true,                  // Only sent over HTTPS
 			SameSite: http.SameSiteNoneMode, // Controls cross-site request behavior
-			Domain:   r.Host,
+			Domain:   tld,
 		}
 
 		// Generate a new random session ID
