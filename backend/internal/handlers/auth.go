@@ -96,8 +96,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	session.Values["authenticated"] = true
 	session.Values["user"] = inputUser.Email
 	session.Save(r, w)
-
-	fmt.Fprintln(w, "Authenticated session:", session.ID)
+	slog.Info("User login successful")
 
 	var domain string
 	siteURL, siteUrlErr := h.getRedirectUrl(r, w)
@@ -208,7 +207,6 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	session, err := store.Get(r, "session-cook")
 	// Check if "authenticated" is set and true in the session
 	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
-		session, _ := store.Get(r, "session-cook")
 		session.Options = &sessions.Options{
 			Path:     "/",                   // Available across the entire domain
 			MaxAge:   3600,                  // Expires after 1 hour
@@ -222,15 +220,18 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 
 		// Set some initial values
 		session.Values["authenticated"] = false
-		session.Save(r, w)
+		if err := session.Save(r, w); err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		slog.Info("created new session with id", session.ID)
 
-		fmt.Fprintln(w, "Session created:", session.ID)
 		// If the user cannot be read from the cookie, redirect to /login with the site URL as a parameter
 		h.setRedirectCookie(siteURL, r, w) //Fixme: improve domain handling
 		http.Redirect(w, r, "/login?redirect="+siteURL, http.StatusSeeOther)
 		return
 	}
-
+	slog.Info("Incoming session is authenticated")
 	sessionUser, ok := session.Values["user"].(bool)
 	if !ok {
 		h.logError(w, "error while fetching user details from session", err, http.StatusInternalServerError)
