@@ -99,7 +99,11 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
+	domain, err := extractMainDomain(r.Host)
+	if err != nil {
+		slog.Error("could not extract Main Domain", err)
+		return
+	}
 	// Set the token as a cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "X-Auth-Token",
@@ -108,7 +112,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 		Secure:   true,                  // Set this to true if using HTTPS
 		SameSite: http.SameSiteNoneMode, // Set this to true if using HTTPS
-		Domain:   r.Host,                // Adjust to your domain
+		Domain:   domain,                // Adjust to your domain
 		Path:     "/",
 	})
 
@@ -238,13 +242,16 @@ func (h *Handler) logError(w http.ResponseWriter, message string, err error, sta
 }
 
 func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
-	cookie := r.Header.Get("X-Auth-Token")
-	slog.Info("Token:", cookie)
+	cookie, err := r.Cookie("X-Auth-Token")
+	if err != nil {
+		slog.Error("Authentication Cookie missing", err)
+		return "", fmt.Errorf("Authentication cookie missing")
+	}
 
-	tokenStr := cookie
+	tokenStr := cookie.Value
 	claims := &jwt.MapClaims{}
 
-	_, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+	_, err = jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 		return h.JWTKey, nil
 	})
 
