@@ -267,10 +267,6 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("Incoming session is authenticated")
 	sessionUser, ok := session.Values["user"].(string)
-	if !ok {
-		h.logError(w, "error while fetching user details from session", err, http.StatusInternalServerError)
-		return
-	}
 	if sessionUser == "" {
 		sessionUser = oneTimeStore[token].user
 	}
