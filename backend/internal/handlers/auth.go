@@ -27,8 +27,13 @@ type Handler struct {
 	BaseURL string
 }
 
+type TokenInfo struct {
+	authenticated bool
+	user          string
+}
+
 var store = sessions.NewCookieStore([]byte("your-very-secret-key"))
-var oneTimeStore = make(map[string]bool)
+var oneTimeStore = make(map[string]TokenInfo)
 
 func NewHandler(db *gorm.DB) *Handler {
 	jwtKey, err := util.GetEnvOrError("JWT_SECRET_KEY")
@@ -140,7 +145,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	if oneTimeToken == "" {
 		return
 	}
-	oneTimeStore[oneTimeToken] = true
+	oneTimeStore[oneTimeToken] = TokenInfo{true, inputUser.Email}
 	sendJSONResponse(w, response, http.StatusOK)
 }
 
@@ -216,7 +221,7 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	// Check if "authenticated" is set and true in the session
 	auth, ok := session.Values["authenticated"].(bool)
 	token, ok := session.Values["oneTimeToken"].(string)
-	tokenAuthenticated := oneTimeStore[token]
+	tokenAuthenticated := oneTimeStore[token].authenticated
 	slog.Info("token ?:", token)
 	slog.Info("tokenAuth ?:", tokenAuthenticated)
 	slog.Info("auth ?:", auth)
@@ -256,6 +261,7 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	if tokenAuthenticated {
 		delete(oneTimeStore, token)
 		session.Values["authenticated"] = true
+		session.Values["user"] = oneTimeStore[token].user
 		session.Save(r, w)
 	}
 	slog.Info("Incoming session is authenticated")
