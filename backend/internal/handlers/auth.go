@@ -146,7 +146,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	oneTimeStore[oneTimeToken] = TokenInfo{true, inputUser.Email}
-	slog.Info("token set")
+	slog.Info("token set", inputUser.Email)
 	sendJSONResponse(w, response, http.StatusOK)
 }
 
@@ -223,8 +223,10 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	auth, ok := session.Values["authenticated"].(bool)
 	token, ok := session.Values["oneTimeToken"].(string)
 	tokenAuthenticated := oneTimeStore[token].authenticated
+	tokenUser := oneTimeStore[token].user
 	slog.Info("token ?:", token)
 	slog.Info("tokenAuth ?:", tokenAuthenticated)
+	slog.Info("tokenUser ?:", tokenUser)
 	slog.Info("auth ?:", auth)
 	slog.Info("ok: ", ok)
 	if !ok || (!auth && !tokenAuthenticated) {
@@ -260,10 +262,10 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if tokenAuthenticated {
-		delete(oneTimeStore, token)
 		session.Values["authenticated"] = true
 		session.Values["user"] = oneTimeStore[token].user
 		session.Save(r, w)
+		delete(oneTimeStore, token)
 	}
 	slog.Info("Incoming session is authenticated")
 	sessionUser, ok := session.Values["user"].(string)
