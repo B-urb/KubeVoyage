@@ -267,11 +267,17 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("Incoming session is authenticated")
 	sessionUser, ok := session.Values["user"].(string)
-	slog.Info(sessionUser)
 	if !ok {
 		h.logError(w, "error while fetching user details from session", err, http.StatusInternalServerError)
 		return
 	}
+	if sessionUser == "" {
+		sessionUser = oneTimeStore[token].user
+	}
+	if sessionUser == "" {
+		h.logError(w, "error while fetching user details from session", err, http.StatusInternalServerError)
+	}
+	slog.Info(sessionUser)
 
 	// Check if the user has the role "admin"
 	var user models.User
