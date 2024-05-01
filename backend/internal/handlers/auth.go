@@ -28,6 +28,7 @@ type Handler struct {
 }
 
 var store = sessions.NewCookieStore([]byte("your-very-secret-key"))
+var oneTimeStore = make(map[string]bool)
 
 func NewHandler(db *gorm.DB) *Handler {
 	jwtKey, err := util.GetEnvOrError("JWT_SECRET_KEY")
@@ -90,6 +91,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		sendJSONError(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+
 	session, _ := store.Get(r, "session-cook")
 	slog.Info("New?: ", session.IsNew)
 	session.Values["authenticated"] = true
@@ -134,6 +136,11 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		Message:  "Login successful",
 		Redirect: siteURL != "" && siteUrlErr == nil,
 	}
+	oneTimeToken := r.URL.Query().Get("token")
+	if oneTimeToken == "" {
+		return
+	}
+	oneTimeStore[oneTimeToken] = true
 	sendJSONResponse(w, response, http.StatusOK)
 }
 
@@ -208,9 +215,13 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	session, err := store.Get(r, "session-cook")
 	// Check if "authenticated" is set and true in the session
 	auth, ok := session.Values["authenticated"].(bool)
+	token, ok := session.Values["oneTimeToken"].(string)
+	tokenAuthenticated := oneTimeStore[token]
+	slog.Info("token ?:", token)
+	slog.Info("tokenAuth ?:", tokenAuthenticated)
 	slog.Info("auth ?:", auth)
 	slog.Info("ok: ", ok)
-	if !ok || !auth {
+	if !ok || (!auth && !tokenAuthenticated) {
 		session.Options = &sessions.Options{
 			Path:     "/",                   // Available across the entire domain
 			MaxAge:   3600,                  // Expires after 1 hour
@@ -227,6 +238,9 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 
 		// Set some initial values
 		session.Values["authenticated"] = false
+		oneTimeToken := generateSessionID()
+		oneTimeStore[oneTimeToken] = false
+		session.Values["oneTimeToken"] = oneTimeToken
 		if err := session.Save(r, w); err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
@@ -236,8 +250,13 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 
 		// If the user cannot be read from the cookie, redirect to /login with the site URL as a parameter
 		h.setRedirectCookie(siteURL, r, w) //Fixme: improve domain handling
-		http.Redirect(w, r, "/login?redirect="+siteURL, http.StatusSeeOther)
+		http.Redirect(w, r, "/login?redirect="+siteURL+"&token="+oneTimeToken, http.StatusSeeOther)
 		return
+	}
+	if tokenAuthenticated {
+		delete(oneTimeStore, token)
+		session.Values["authenticated"] = true
+		session.Save(r, w)
 	}
 	slog.Info("Incoming session is authenticated")
 	sessionUser, ok := session.Values["user"].(string)
