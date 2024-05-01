@@ -10,7 +10,8 @@
     try {
       const params = new URLSearchParams(window.location.search);
       const redirectUrl = params.get('redirect'); //
-      const response = await fetch(`/api/login?redirect=${encodeURIComponent(redirectUrl)}`, {
+      const token = params.get('token'); //
+      const response = await fetch(`/api/login?redirect=${encodeURIComponent(redirectUrl)}&token=${token}`, {
         method: 'POST',
         credentials: "include",
         headers: {

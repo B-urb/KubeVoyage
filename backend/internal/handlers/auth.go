@@ -250,7 +250,7 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 
 		// If the user cannot be read from the cookie, redirect to /login with the site URL as a parameter
 		h.setRedirectCookie(siteURL, r, w) //Fixme: improve domain handling
-		http.Redirect(w, r, "/login?redirect="+siteURL+"&token="+oneTimeToken, http.StatusSeeOther)
+		http.Redirect(w, r, "/login?redirect="+strings.TrimSuffix(siteURL, "/")+"&token="+oneTimeToken, http.StatusSeeOther)
 		return
 	}
 	if tokenAuthenticated {
