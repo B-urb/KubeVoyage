@@ -244,7 +244,7 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		// Set some initial values
 		session.Values["authenticated"] = false
 		oneTimeToken := generateSessionID()
-		oneTimeStore[oneTimeToken] = false
+		oneTimeStore[oneTimeToken] = TokenInfo{false, ""}
 		session.Values["oneTimeToken"] = oneTimeToken
 		if err := session.Save(r, w); err != nil {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
