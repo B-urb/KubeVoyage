@@ -146,6 +146,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	oneTimeStore[oneTimeToken] = TokenInfo{true, inputUser.Email}
+	slog.Info("token set")
 	sendJSONResponse(w, response, http.StatusOK)
 }
 
