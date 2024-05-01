@@ -231,18 +231,6 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		session.Options = &sessions.Options{
-			Path:     "/",                   // Available across the entire domain
-			MaxAge:   3600,                  // Expires after 1 hour
-			HttpOnly: true,                  // Not accessible via JavaScript
-			Secure:   true,                  // Only sent over HTTPS
-			SameSite: http.SameSiteNoneMode, // Controls cross-site request behavior
-			Domain:   r.Host,
-		}
-		if err := session.Save(r, w); err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
 
 		slog.Info("created new session with id", session.ID)
 
