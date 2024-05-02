@@ -98,11 +98,9 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	session, _ := store.Get(r, "session-cook")
-	slog.Info("New?: ", session.IsNew)
 	session.Values["authenticated"] = true
 	session.Values["user"] = inputUser.Email
 	session.Save(r, w)
-	slog.Info("User login successful")
 
 	var domain string
 	siteURL, siteUrlErr := h.getRedirectUrl(r, w)
@@ -146,7 +144,6 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	oneTimeStore[oneTimeToken] = TokenInfo{true, inputUser.Email}
-	slog.Info("token set", inputUser.Email)
 	sendJSONResponse(w, response, http.StatusOK)
 }
 
@@ -217,18 +214,13 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		//return
 	}
 	tld, err := extractMainDomain(siteURL)
-	logCookies(r)
 	session, err := store.Get(r, "session-cook")
 	// Check if "authenticated" is set and true in the session
 	auth, ok := session.Values["authenticated"].(bool)
 	token, ok := session.Values["oneTimeToken"].(string)
 	tokenAuthenticated := oneTimeStore[token].authenticated
 	tokenUser := oneTimeStore[token].user
-	slog.Info("token ?:", token)
-	slog.Info("tokenAuth ?:", tokenAuthenticated)
-	slog.Info("tokenUser ?:", tokenUser)
-	slog.Info("auth ?:", auth)
-	slog.Info("ok: ", ok)
+
 	if !ok || (!auth && !tokenAuthenticated) {
 		session.Options = &sessions.Options{
 			Path:     "/",                   // Available across the entire domain
@@ -241,8 +233,6 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 
 		// Generate a new random session ID
 		session.ID = generateSessionID()
-		//TODO: check why this always gets executed
-		//TODO: check if login reuses session or creates new
 
 		// Set some initial values
 		session.Values["authenticated"] = false
@@ -253,8 +243,6 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-
-		slog.Info("created new session with id", session.ID)
 
 		// If the user cannot be read from the cookie, redirect to /login with the site URL as a parameter
 		h.setRedirectCookie(siteURL, r, w) //Fixme: improve domain handling
@@ -267,15 +255,14 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		session.Save(r, w)
 		delete(oneTimeStore, token)
 	}
-	slog.Info("Incoming session is authenticated")
+	slog.Debug("Incoming session is authenticated")
 	sessionUser, ok := session.Values["user"].(string)
 	if sessionUser == "" {
-		sessionUser = oneTimeStore[token].user
+		sessionUser = tokenUser
 	}
 	if sessionUser == "" {
 		h.logError(w, "error while fetching user details from session", err, http.StatusInternalServerError)
 	}
-	slog.Info(sessionUser)
 
 	// Check if the user has the role "admin"
 	var user models.User
@@ -321,7 +308,6 @@ func (h *Handler) logError(w http.ResponseWriter, message string, err error, sta
 }
 
 func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
-	logCookies(r)
 	cookie, err := r.Cookie("X-Auth-Token")
 	if err != nil {
 		slog.Error("Authentication Cookie missing", err)
