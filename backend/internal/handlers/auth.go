@@ -98,6 +98,19 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	session, _ := store.Get(r, "session-cook")
+	tld, err := extractMainDomain(r.Host)
+	if err != nil {
+		sendJSONError(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	session.Options = &sessions.Options{
+		Path:     "/",                   // Available across the entire domain
+		MaxAge:   3600,                  // Expires after 1 hour
+		HttpOnly: true,                  // Not accessible via JavaScript
+		Secure:   true,                  // Only sent over HTTPS
+		SameSite: http.SameSiteNoneMode, // Controls cross-site request behavior
+		Domain:   tld,
+	}
 	session.Values["authenticated"] = true
 	session.Values["user"] = inputUser.Email
 	session.Save(r, w)

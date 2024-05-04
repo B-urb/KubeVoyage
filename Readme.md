@@ -21,6 +21,7 @@ Embarking on a secure journey in Kubernetes.
 - Node.js and npm
 - Kubernetes cluster (for deployment)
 - Helm (for deployment)
+- traefik > 3.0
 
 ### Usage
 add annotation `` to your ingress
