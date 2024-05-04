@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   let redirectURL = '';
 
+
   onMount(() => {
     // Extract the redirect URL from the query parameters
     const urlParams = new URLSearchParams(window.location.search);

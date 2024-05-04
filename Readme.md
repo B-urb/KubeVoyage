@@ -4,7 +4,7 @@ Embarking on a secure journey in Kubernetes.
 
 `KubeVoyage` is a Kubernetes authentication proxy designed to streamline user access to various sites. Built with a Svelte frontend, a Go backend, and an SQL database, it offers a robust solution for managing user access in a Kubernetes environment.
 
-![KubeVoyage Logo](frontend/public/Kubevoyage.png)  <!-- If you have a logo, replace 'path_to_logo.png' with its path -->
+![KubeVoyage Logo](frontend/public/Kubevoyage.png) 
 
 ## Features
 
@@ -21,13 +21,21 @@ Embarking on a secure journey in Kubernetes.
 - Node.js and npm
 - Kubernetes cluster (for deployment)
 - Helm (for deployment)
+- traefik > 3.0
+
+### Usage
+add annotation `` to your ingress
+
+or for easier usage you can add the annotation `kubevoyage-auth=true` to your ingress if you use the accompanying
+[kubernetes operator](https://github.com/B-urb/kubevoyage-operator). The operator automatically generates the necessary middleware
+and ingress annotation.
 
 ### Installation
 
 1. **Clone the Repository**:
 
    ```bash
-   git clone https://github.com/yourusername/kubevoyage.git
+   git clone https://github.com/B-urb/kubevoyage.git
    cd kubevoyage
    ```
 
@@ -77,6 +85,7 @@ Use the provided Helm chart to deploy `KubeVoyage` to your Kubernetes cluster:
 helm repo add github-burban https://B-urb.github.io/KubeVoyage/
 helm install kubevoyage github-burban/kubevoyage
 ```
+
 
 ## Testing
 
