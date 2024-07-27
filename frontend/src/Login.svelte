@@ -26,6 +26,7 @@
 
       if (response.ok) {
         message = "Login successful!";
+        $isAuthenticated = true;
         if (data.redirect) {
           const authResponse = await fetch('/api/authenticate', {
             method: 'GET',
@@ -33,7 +34,6 @@
           });
 
           if (authResponse.status === 200) {
-            $isAuthenticated = true;
             if (redirectUrl !== null) {
               isRedirecting = true;
               setTimeout(() => {
