@@ -57,10 +57,6 @@ func (h *Handler) HandleRequestSite(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
-	if user.Role == "admin" {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
 	// Parse the request body
 	err = json.NewDecoder(r.Body).Decode(&redirect)
 	if err != nil {
