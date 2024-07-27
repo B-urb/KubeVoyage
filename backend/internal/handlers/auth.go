@@ -321,7 +321,7 @@ func (h *Handler) logError(w http.ResponseWriter, message string, err error, sta
 }
 
 func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
-	cookie, err := r.Cookie("X-Auth-Token")
+	cookie, err := r.Cookie("session-cook")
 	if err != nil {
 		slog.Error("Authentication Cookie missing", err)
 		return "", fmt.Errorf("Authentication cookie missing")
