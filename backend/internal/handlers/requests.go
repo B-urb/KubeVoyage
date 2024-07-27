@@ -43,6 +43,8 @@ func (h *Handler) HandleRequests(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleRequestSite(w http.ResponseWriter, r *http.Request) {
+	var redirect models.Redirect
+
 	userEmail, err := h.getUserEmailFromToken(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -59,17 +61,18 @@ func (h *Handler) HandleRequestSite(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	siteURL, err := h.getRedirectUrl(r, w)
+	// Parse the request body
+	err := json.NewDecoder(r.Body).Decode(&redirect)
 	if err != nil {
-		http.Error(w, "Request URL not found", http.StatusNotFound)
+		sendJSONError(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
 
 	// Check if site already exists
 	var site models.Site
-	if err := h.db.Where("url = ?", siteURL).First(&site).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := h.db.Where("url = ?", redirect.Redirect).First(&site).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		// If not, create a new site entry
-		site = models.Site{URL: siteURL}
+		site = models.Site{URL: redirect.Redirect}
 		h.db.Create(&site)
 	}
 

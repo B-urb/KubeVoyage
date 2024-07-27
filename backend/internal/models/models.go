@@ -39,3 +39,7 @@ func (s State) IsValid() bool {
 	}
 	return false
 }
+
+type Redirect struct {
+	Redirect string
+}
