@@ -16,7 +16,7 @@ func (h *Handler) HandleRequests(w http.ResponseWriter, r *http.Request) {
 		sendJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	userEmail, err := h.getUserEmailFromToken(r)
+	userEmail, err := h.getUserFromSession(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -45,7 +45,7 @@ func (h *Handler) HandleRequests(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleRequestSite(w http.ResponseWriter, r *http.Request) {
 	var redirect models.Redirect
 
-	userEmail, err := h.getUserEmailFromToken(r)
+	userEmail, err := h.getUserFromSession(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -102,7 +102,7 @@ func (h *Handler) HandleUpdateSiteState(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Invalid state value", http.StatusBadRequest)
 		return
 	}
-	userEmail, err := h.getUserEmailFromToken(r)
+	userEmail, err := h.getUserFromSession(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return

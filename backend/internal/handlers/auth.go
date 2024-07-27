@@ -320,6 +320,16 @@ func (h *Handler) logError(w http.ResponseWriter, message string, err error, sta
 	http.Error(w, message, statusCode)
 }
 
+func (h *Handler) getUserFromSession(r *http.Request) (string, error) {
+	session, err := store.Get(r, "session-cook")
+	if err != nil {
+		slog.Debug("Error retrieving user from session", err)
+		return "", err
+	}
+	user, _ := session.Values["user"].(string)
+	return user, nil
+}
+
 func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
 	cookie, err := r.Cookie("session-cook")
 	if err != nil {
