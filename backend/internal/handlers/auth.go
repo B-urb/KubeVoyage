@@ -132,10 +132,10 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if err != nil {
-		slog.Error("could not extract Main Domain", err)
+		slog.Error("could not extract Main Domain", "error", err)
 		return
 	}
-	slog.Info("Domain: ", domain)
+	slog.Info("Domain: ", "value", domain)
 	// Set the token as a cookie
 	//http.SetCookie(w, &http.Cookie{
 	//	Name:     "X-Auth-Token",
@@ -320,7 +320,7 @@ func (h *Handler) logError(w http.ResponseWriter, message string, err error, sta
 func (h *Handler) getUserFromSession(r *http.Request) (string, error) {
 	session, err := store.Get(r, "session-cook")
 	if err != nil {
-		slog.Debug("Error retrieving user from session", err)
+		slog.Debug("Error retrieving user from session", "error", err)
 		return "", err
 	}
 	user, _ := session.Values["user"].(string)
@@ -330,7 +330,7 @@ func (h *Handler) getUserFromSession(r *http.Request) (string, error) {
 func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
 	cookie, err := r.Cookie("session-cook")
 	if err != nil {
-		slog.Error("Authentication Cookie missing", err)
+		slog.Error("Authentication Cookie missing", "error", err)
 		return "", fmt.Errorf("Authentication cookie missing")
 	}
 
@@ -386,7 +386,7 @@ func (h *Handler) getRedirectFromCookie(r *http.Request, w http.ResponseWriter, 
 func (h *Handler) getRedirectUrl(r *http.Request, w http.ResponseWriter) (string, error) {
 	// Extract the redirect parameter from the request to get the site URL.
 	siteURL := r.URL.Query().Get("redirect")
-	if siteURL == "" {
+	if siteURL == "" || siteURL == "null" {
 		return "", fmt.Errorf("Redirect URL missing from both header and URL parameter")
 	} else {
 		return siteURL, nil
@@ -417,7 +417,7 @@ func logCookies(r *http.Request) {
 	allCookies := strings.Join(cookieStrings, "; ")
 
 	// Step 3: Log the complete cookie string
-	slog.Info("Cookies:", allCookies)
+	slog.Info("Cookies:", "cookies", allCookies)
 }
 func printHeaders(r *http.Request) {
 	for name, values := range r.Header {
