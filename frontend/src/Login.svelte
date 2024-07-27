@@ -1,5 +1,6 @@
 <script>
   import { navigate } from "svelte-routing";
+  import { isAuthenticated } from './authStore.js';
 
   let email = '';
   let password = '';
@@ -10,6 +11,7 @@
     try {
       const params = new URLSearchParams(window.location.search);
       const redirectUrl = params.get('redirect'); //
+
       const token = params.get('token'); //
       const response = await fetch(`/api/login?redirect=${encodeURIComponent(redirectUrl)}&token=${token}`, {
         method: 'POST',
@@ -32,9 +34,15 @@
           });
 
           if (authResponse.status === 200) {
-            setTimeout(() => {
-              window.location.href = "/api/redirect";
-            }, 2000); //FIXME Redirect
+            $isAuthenticated = true;
+            if (redirectUrl !== null) {
+              setTimeout(() => {
+                window.location.href = "/api/redirect";
+              }, 2000); //FIXME Redirect
+            }
+            else {
+
+            }
           } else if (authResponse.status === 401) {
             await fetch('/api/request', {
               method: 'POST',

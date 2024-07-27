@@ -1,5 +1,6 @@
 <script>
   import { Router, Route, Link } from 'svelte-routing';
+  import { isAuthenticated } from './authStore.js';
   import routes from './routes.js';
   import 'bootstrap/dist/css/bootstrap.min.css';
   import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -14,15 +15,19 @@
     </button>
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav">
+        {#if !$isAuthenticated}
         <li class="nav-item active">
           <Link class="nav-link" to="/login">Login</Link>
         </li>
         <li class="nav-item active">
           <Link class="nav-link" to="/register">Register</Link>
         </li>
+          {/if}
+        {#if $isAuthenticated}
         <li class="nav-item">
           <Link class="nav-link" to="/requests">Requests</Link>
         </li>
+          {/if}
         <!-- Add more links as needed -->
       </ul>
     </div>

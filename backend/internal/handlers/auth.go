@@ -212,9 +212,6 @@ func (h *Handler) HandleRedirect(w http.ResponseWriter, r *http.Request) {
 		siteURL = r.Host
 	}
 
-	redirect := r.Header.Get("X-Auth-Site")
-	log.Println(redirect)
-	log.Println(siteURL)
 	http.Redirect(w, r, siteURL, http.StatusSeeOther)
 
 }
