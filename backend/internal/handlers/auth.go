@@ -113,18 +113,24 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	session.Values["authenticated"] = true
 	session.Values["user"] = inputUser.Email
-	session.Save(r, w)
+	if err := session.Save(r, w); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 
 	var domain string
-	siteURL, siteUrlErr := h.getRedirectUrl(r, w)
+	siteURL, siteUrlErr := h.getRedirectUrl(r)
 	if siteUrlErr != nil {
 		// If there was an error getting the redirect URL, use the request's host as the domain
 		log.Println("Site URl could not be determined: " + siteURL)
 		domain = r.Host
 	} else {
 		// If the redirect URL was obtained successfully, extract the main domain
-		h.setRedirectCookie(siteURL, r, w)
-		var err error
+		err := h.setRedirectCookie(siteURL, r, w)
+		if err != nil {
+			slog.Error("Failed to set redirect cookie", "error", err)
+		}
+
 		domain, err = extractMainDomain(r.Host)
 		if err != nil {
 			sendJSONError(w, "Invalid Redirect URL", http.StatusBadRequest)
@@ -136,16 +142,6 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	slog.Info("Domain: ", "value", domain)
-	// Set the token as a cookie
-	//http.SetCookie(w, &http.Cookie{
-	//	Name:     "X-Auth-Token",
-	//	Value:    tokenString,
-	//	Expires:  time.Now().Add(24 * time.Hour),
-	//	Secure:   true,                  // Set this to true if using HTTPS
-	//	SameSite: http.SameSiteNoneMode, // Set this to true if using HTTPS
-	//	Domain:   r.Host,                // Adjust to your domain
-	//	Path:     "/",
-	//})
 
 	response := LoginResponse{
 		Success:  true,
@@ -204,7 +200,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 }
 func (h *Handler) HandleRedirect(w http.ResponseWriter, r *http.Request) {
 	//FIXME: Not unchecked redirecting with parameter
-	siteURL, err := h.getRedirectFromCookie(r, w, true)
+	siteURL, err := h.getRedirectFromCookie(r, true)
 	if err != nil {
 
 	}
@@ -217,11 +213,8 @@ func (h *Handler) HandleRedirect(w http.ResponseWriter, r *http.Request) {
 }
 func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract the user's email from the session or JWT token.
-	siteURL, err := h.getRedirectUrl(r, w)
+	siteURL, err := h.getRedirectUrl(r)
 	if err != nil {
-		log.Println(err.Error())
-		//h.logError(w, err.Error(), nil, http.StatusBadRequest)
-		//return
 	}
 	tld, err := extractMainDomain(siteURL)
 	session, err := store.Get(r, "session-cook")
@@ -255,14 +248,20 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// If the user cannot be read from the cookie, redirect to /login with the site URL as a parameter
-		h.setRedirectCookie(siteURL, r, w) //Fixme: improve domain handling
+		err = h.setRedirectCookie(siteURL, r, w) //Fixme: improve domain handling
+		if err != nil {
+			slog.Error("failed to set redirect cookie", "error", err)
+		}
 		http.Redirect(w, r, "/login?redirect="+strings.TrimSuffix(siteURL, "/")+"&token="+oneTimeToken, http.StatusSeeOther)
 		return
 	}
 	if tokenAuthenticated {
 		session.Values["authenticated"] = true
 		session.Values["user"] = oneTimeStore[token].user
-		session.Save(r, w)
+		err = session.Save(r, w)
+		if err != nil {
+			slog.Error("Failed to save session", "error", err)
+		}
 		delete(oneTimeStore, token)
 	}
 	slog.Debug("Incoming session is authenticated")
@@ -331,7 +330,7 @@ func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
 	cookie, err := r.Cookie("session-cook")
 	if err != nil {
 		slog.Error("Authentication Cookie missing", "error", err)
-		return "", fmt.Errorf("Authentication cookie missing")
+		return "", fmt.Errorf("authentication cookie missing")
 	}
 
 	tokenStr := cookie.Value
@@ -342,12 +341,12 @@ func (h *Handler) getUserEmailFromToken(r *http.Request) (string, error) {
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("Invalid token")
+		return "", fmt.Errorf("invalid token")
 	}
 
 	userEmail, ok := (*claims)["user"].(string)
 	if !ok {
-		return "", fmt.Errorf("Invalid token claims")
+		return "", fmt.Errorf("invalid token claims")
 	}
 
 	return userEmail, nil
@@ -372,7 +371,7 @@ func (h *Handler) setRedirectCookie(redirectUrl string, r *http.Request, w http.
 	})
 	return nil
 }
-func (h *Handler) getRedirectFromCookie(r *http.Request, w http.ResponseWriter, clear bool) (string, error) {
+func (h *Handler) getRedirectFromCookie(r *http.Request, clear bool) (string, error) {
 	cookie, err := r.Cookie("X-Auth-Site")
 	if err != nil {
 		if errors.Is(err, http.ErrNoCookie) {
@@ -381,13 +380,15 @@ func (h *Handler) getRedirectFromCookie(r *http.Request, w http.ResponseWriter, 
 		}
 		return "", err
 	}
+	if clear {
+	}
 	return cookie.Value, nil
 }
-func (h *Handler) getRedirectUrl(r *http.Request, w http.ResponseWriter) (string, error) {
+func (h *Handler) getRedirectUrl(r *http.Request) (string, error) {
 	// Extract the redirect parameter from the request to get the site URL.
 	siteURL := r.URL.Query().Get("redirect")
 	if siteURL == "" || siteURL == "null" {
-		return "", fmt.Errorf("Redirect URL missing from both header and URL parameter")
+		return "", fmt.Errorf("redirect URL missing from both header and URL parameter")
 	} else {
 		return siteURL, nil
 	}
@@ -396,34 +397,10 @@ func (h *Handler) getRedirectUrl(r *http.Request, w http.ResponseWriter) (string
 // generateSessionID generates a secure, random session ID.
 func generateSessionID() string {
 	size := 32 // This size can be adjusted according to your security needs
-	bytes := make([]byte, size)
-	_, err := rand.Read(bytes)
+	randomBytes := make([]byte, size)
+	_, err := rand.Read(randomBytes)
 	if err != nil {
 		log.Fatalf("Failed to generate random session ID: %v", err)
 	}
-	return hex.EncodeToString(bytes)
-}
-func logCookies(r *http.Request) {
-	cookies := r.Cookies() // Step 1: Retrieve all cookies
-	var cookieStrings []string
-
-	for _, cookie := range cookies {
-		// Step 2: Format each cookie as a string
-		cookieStr := fmt.Sprintf("%s=%s", cookie.Name, cookie.Value)
-		cookieStrings = append(cookieStrings, cookieStr)
-	}
-
-	// Join all cookie strings into a single string
-	allCookies := strings.Join(cookieStrings, "; ")
-
-	// Step 3: Log the complete cookie string
-	slog.Info("Cookies:", "cookies", allCookies)
-}
-func printHeaders(r *http.Request) {
-	for name, values := range r.Header {
-		// Loop over all values for the name.
-		for _, value := range values {
-			fmt.Printf("%s: %s\n", name, value)
-		}
-	}
+	return hex.EncodeToString(randomBytes)
 }
