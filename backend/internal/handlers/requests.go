@@ -62,7 +62,7 @@ func (h *Handler) HandleRequestSite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Parse the request body
-	err := json.NewDecoder(r.Body).Decode(&redirect)
+	err = json.NewDecoder(r.Body).Decode(&redirect)
 	if err != nil {
 		sendJSONError(w, "Bad Request", http.StatusBadRequest)
 		return
