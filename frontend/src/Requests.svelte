@@ -69,8 +69,12 @@
         <td>{request.site}</td>
         <td>{request.state}</td>
         <td>
-          {request.state == "requested" || request.state == "declined" ? <button class="btn btn-success btn-sm" on:click={() => acceptRequest(request)}>Accept</button> : null}
-          {request.state == "requested" || request.state == "authorized" ? <button class="btn btn-danger btn-sm" on:click={() => denyRequest(request)}>Deny</button> : null}
+          {#if request.state === "requested" || request.state === "declined"}
+            <button class="btn btn-success btn-sm" on:click={() => acceptRequest(request)}>Accept</button>
+          {/if}
+          {#if request.state === "requested" || request.state === "authorized"}
+            <button class="btn btn-danger btn-sm" on:click={() => denyRequest(request)}>Deny</button>
+          {/if}
         </td>
       </tr>
     {/each}
