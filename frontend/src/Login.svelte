@@ -27,7 +27,6 @@
       if (response.ok) {
         message = "Login successful!";
         if (data.redirect) {
-          isRedirecting = true;
           const authResponse = await fetch('/api/authenticate', {
             method: 'GET',
             credentials: 'include'
@@ -36,12 +35,10 @@
           if (authResponse.status === 200) {
             $isAuthenticated = true;
             if (redirectUrl !== null) {
+              isRedirecting = true;
               setTimeout(() => {
                 window.location.href = "/api/redirect";
               }, 2000); //FIXME Redirect
-            }
-            else {
-
             }
           } else if (authResponse.status === 401) {
             await fetch('/api/request', {

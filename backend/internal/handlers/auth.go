@@ -381,34 +381,11 @@ func (h *Handler) getRedirectFromCookie(r *http.Request, w http.ResponseWriter, 
 		}
 		return "", err
 	}
-
-	// Clear the cookie once it's read
-	//http.SetCookie(w, &http.Cookie{
-	//	Name:    "X-Auth-Site",
-	//	Value:   "",
-	//	Expires: time.Unix(0, 0),
-	//	Path:    "/",
-	//})
-
 	return cookie.Value, nil
 }
 func (h *Handler) getRedirectUrl(r *http.Request, w http.ResponseWriter) (string, error) {
 	// Extract the redirect parameter from the request to get the site URL.
-
-	siteURL := r.Header.Get("X-Forwarded-Uri")
-	if siteURL == "" {
-		siteURL = r.Header.Get("X-Auth-Site")
-		if siteURL == "" {
-			siteURL = r.URL.Query().Get("redirect")
-			if siteURL == "" {
-				surl, err := h.getRedirectFromCookie(r, w, false)
-				if err != nil {
-					return "", fmt.Errorf("Redirect URL missing from both header and URL parameter")
-				}
-				siteURL = surl
-			}
-		}
-	}
+	siteURL := r.URL.Query().Get("redirect")
 	if siteURL == "" {
 		return "", fmt.Errorf("Redirect URL missing from both header and URL parameter")
 	} else {
