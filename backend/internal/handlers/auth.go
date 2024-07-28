@@ -204,6 +204,13 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	// 1. Extract the user's email from the session or JWT token.
 	siteURL, err := h.getRedirectUrl(r)
 	if err != nil {
+		slog.Error("Error retrieving redirect url", "error", err)
+	}
+	if siteURL == "" {
+		siteURL, err = h.getRedirectFromCookie(r, false)
+		if err != nil {
+			slog.Error("Error retrieving redirect url", "error", err)
+		}
 	}
 	tld, err := extractMainDomain(siteURL)
 	session, err := store.Get(r, "session-cook")

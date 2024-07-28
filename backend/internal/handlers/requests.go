@@ -8,7 +8,6 @@ import (
 	"gorm.io/gorm"
 	"log"
 	"net/http"
-	"time"
 )
 
 func (h *Handler) HandleRequests(w http.ResponseWriter, r *http.Request) {
@@ -132,18 +131,4 @@ func (h *Handler) HandleUpdateSiteState(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Write([]byte("State updated successfully"))
-}
-
-func HandleLogout(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     "auth_token",
-		Value:    "",
-		Expires:  time.Unix(0, 0),
-		HttpOnly: true,
-		Secure:   true, // Set this to true if using HTTPS
-		Domain:   "",   // Adjust to your domain
-		Path:     "/",
-	})
-
-	w.Write([]byte("Logged out successfully"))
 }
