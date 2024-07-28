@@ -53,7 +53,7 @@
         {#if $isAuthenticated}
         <li class="nav-item">
           <Link class="nav-link" to="/requests">Requests</Link>
-          <button class="nav-link" on:click={logout()}>Requests</button>
+          <button class="nav-link" on:click={logout}>Requests</button>
 
 
         </li>
