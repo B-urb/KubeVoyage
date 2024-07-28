@@ -102,11 +102,9 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	session.Values["authenticated"] = true
 	session.Values["user"] = inputUser.Email
-	if session.IsNew {
-		if err := session.Save(r, w); err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-			return
-		}
+	if err := session.Save(r, w); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 
 	var domain string
