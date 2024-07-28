@@ -53,10 +53,10 @@
         {#if $isAuthenticated}
         <li class="nav-item">
           <Link class="nav-link" to="/requests">Requests</Link>
-          <button class="nav-link" on:click={logout}>Requests</button>
-
-
         </li>
+          <li>
+          <button class="nav-link" on:click={logout}>Logout</button>
+          </li>
           {/if}
         <!-- Add more links as needed -->
       </ul>

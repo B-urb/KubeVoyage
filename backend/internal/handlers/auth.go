@@ -86,18 +86,6 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user": inputUser.Email,
-		"exp":  time.Now().Add(24 * time.Hour).Unix(),
-	})
-
-	// Sign and get the complete encoded token as a string using the secret
-	_, err = token.SignedString(h.JWTKey)
-	if err != nil {
-		sendJSONError(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-
 	session, _ := store.Get(r, "session-cook")
 	tld, err := extractMainDomain(r.Host)
 	if err != nil {
@@ -318,10 +306,11 @@ func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 
 	// Clear session values
 	session.Values["authenticated"] = false
-	delete(session.Values, "user")
 
 	// Expire the cookie
 	session.Options.MaxAge = -1
+	tld, err := extractMainDomain(r.Host)
+	session.Options.Domain = tld
 
 	// Save the session
 	err = session.Save(r, w)
