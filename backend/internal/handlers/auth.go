@@ -32,7 +32,8 @@ type TokenInfo struct {
 	user          string
 }
 
-var store = sessions.NewCookieStore([]byte("your-very-secret-key"))
+var secret, _ = util.GetEnvOrDefault("JWT_SECRET_KEY", "kubevoyage")
+var store = sessions.NewCookieStore([]byte(secret))
 var oneTimeStore = make(map[string]TokenInfo)
 
 func NewHandler(db *gorm.DB) *Handler {
@@ -105,7 +106,7 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	session.Options = &sessions.Options{
 		Path:     "/",                   // Available across the entire domain
-		MaxAge:   3600,                  // Expires after 1 hour
+		MaxAge:   3600 * 24 * 7,         // Expires after 1 week TODO: make configurable
 		HttpOnly: true,                  // Not accessible via JavaScript
 		Secure:   true,                  // Only sent over HTTPS
 		SameSite: http.SameSiteNoneMode, // Controls cross-site request behavior
@@ -113,9 +114,11 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	session.Values["authenticated"] = true
 	session.Values["user"] = inputUser.Email
-	if err := session.Save(r, w); err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
+	if session.IsNew {
+		if err := session.Save(r, w); err != nil {
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	var domain string
@@ -306,6 +309,68 @@ func (h *Handler) HandleAuthenticate(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 }
+func (h *Handler) HandleLogout(w http.ResponseWriter, r *http.Request) {
+	session, err := store.Get(r, "session-cook")
+	if err != nil {
+		sendJSONError(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Clear session values
+	session.Values["authenticated"] = false
+	delete(session.Values, "user")
+
+	// Expire the cookie
+	session.Options.MaxAge = -1
+
+	// Save the session
+	err = session.Save(r, w)
+	if err != nil {
+		sendJSONError(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	response := map[string]interface{}{
+		"success": true,
+		"message": "Logout successful",
+	}
+	sendJSONResponse(w, response, http.StatusOK)
+}
+
+func (h *Handler) HandleValidateSession(w http.ResponseWriter, r *http.Request) {
+	session, err := store.Get(r, "session-cook")
+	if err != nil {
+		sendJSONError(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	authenticated, ok := session.Values["authenticated"].(bool)
+	if !ok || !authenticated {
+		sendJSONError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	user, ok := session.Values["user"].(string)
+	if !ok || user == "" {
+		sendJSONError(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Optionally, you can check if the user still exists in the database
+	var dbUser models.User
+	result := h.db.Where("email = ?", user).First(&dbUser)
+	if result.Error != nil {
+		sendJSONError(w, "User not found", http.StatusUnauthorized)
+		return
+	}
+
+	response := map[string]interface{}{
+		"success": true,
+		"message": "Session is valid",
+		"user":    user,
+	}
+	sendJSONResponse(w, response, http.StatusOK)
+}
 
 func (h *Handler) logError(w http.ResponseWriter, message string, err error, statusCode int) {
 	logMessage := message
@@ -322,7 +387,11 @@ func (h *Handler) getUserFromSession(r *http.Request) (string, error) {
 		slog.Debug("Error retrieving user from session", "error", err)
 		return "", err
 	}
-	user, _ := session.Values["user"].(string)
+	user, success := session.Values["user"].(string)
+	if success == false {
+		slog.Debug("Error retrieving user from session", "error", err)
+		return "", err
+	}
 	return user, nil
 }
 

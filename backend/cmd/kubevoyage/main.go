@@ -127,6 +127,12 @@ func setupServer(handle *handlers.Handler) http.Handler {
 	mux.Handle("/api/request", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handle.HandleRequestSite(w, r)
 	})))
+	mux.Handle("/api/logout", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handle.HandleLogout(w, r)
+	})))
+	mux.Handle("/api/validate-session", logMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handle.HandleValidateSession(w, r)
+	})))
 
 	return handler
 }
