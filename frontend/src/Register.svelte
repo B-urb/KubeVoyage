@@ -1,5 +1,7 @@
 <!-- Register.svelte -->
+
 <script>
+  import { navigate } from "svelte-routing";
   let email = '';
   let password = '';
   let confirmPassword = '';
@@ -24,7 +26,7 @@
 
       if (response.ok) {
         message = "Registration successful!";
-        // Optionally, redirect the user or perform other actions
+        navigate("/login")
       }
       else {
         message = data.error || "Registration failed!";

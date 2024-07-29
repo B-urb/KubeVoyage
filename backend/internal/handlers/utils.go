@@ -76,6 +76,9 @@ func sendJSONResponse(w http.ResponseWriter, data interface{}, statusCode int) {
 func IsUserAdmin(db *gorm.DB, email string) (bool, error) {
 	var user models.User
 
+	if email == "" {
+		return false, errors.New("user is empty")
+	}
 	// Find the user by email
 	result := db.Where("email = ?", email).First(&user)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
