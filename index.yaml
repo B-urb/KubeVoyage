@@ -2,6 +2,14 @@ apiVersion: v1
 entries:
   kubevoyage:
   - apiVersion: v2
+    created: "2024-07-29T17:28:04.578334926Z"
+    description: A Helm chart for Kubernetes auth proxy
+    digest: 8f3e83dc0295395862a540547c43122fad87f416003b040e9ab2566b37b8ca15
+    name: kubevoyage
+    urls:
+    - https://github.com/B-urb/KubeVoyage/releases/download/kubevoyage-0.9.0/kubevoyage-0.9.0.tgz
+    version: 0.9.0
+  - apiVersion: v2
     created: "2024-07-27T09:10:27.975909589Z"
     description: A Helm chart for Kubernetes auth proxy
     digest: 94cc0f085358979aaddd20618b915635b957f004db92a1be4f0fa9a728c66c0d
@@ -65,4 +73,4 @@ entries:
     urls:
     - https://github.com/B-urb/KubeVoyage/releases/download/kubevoyage-0.1.0/kubevoyage-0.1.0.tgz
     version: 0.1.0
-generated: "2024-07-27T09:10:27.975953922Z"
+generated: "2024-07-29T17:28:04.578369431Z"
