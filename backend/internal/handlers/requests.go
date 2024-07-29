@@ -8,7 +8,6 @@ import (
 	"gorm.io/gorm"
 	"log"
 	"net/http"
-	"time"
 )
 
 func (h *Handler) HandleRequests(w http.ResponseWriter, r *http.Request) {
@@ -16,7 +15,7 @@ func (h *Handler) HandleRequests(w http.ResponseWriter, r *http.Request) {
 		sendJSONError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	userEmail, err := h.getUserEmailFromToken(r)
+	userEmail, err := h.getUserFromSession(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -43,7 +42,9 @@ func (h *Handler) HandleRequests(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleRequestSite(w http.ResponseWriter, r *http.Request) {
-	userEmail, err := h.getUserEmailFromToken(r)
+	var redirect models.Redirect
+
+	userEmail, err := h.getUserFromSession(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -55,21 +56,18 @@ func (h *Handler) HandleRequestSite(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
-	if user.Role == "admin" {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-	siteURL, err := h.getRedirectUrl(r, w)
+	// Parse the request body
+	err = json.NewDecoder(r.Body).Decode(&redirect)
 	if err != nil {
-		http.Error(w, "Request URL not found", http.StatusNotFound)
+		sendJSONError(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
 
 	// Check if site already exists
 	var site models.Site
-	if err := h.db.Where("url = ?", siteURL).First(&site).Error; errors.Is(err, gorm.ErrRecordNotFound) {
+	if err := h.db.Where("url = ?", redirect.Redirect).First(&site).Error; errors.Is(err, gorm.ErrRecordNotFound) {
 		// If not, create a new site entry
-		site = models.Site{URL: siteURL}
+		site = models.Site{URL: redirect.Redirect}
 		h.db.Create(&site)
 	}
 
@@ -103,7 +101,7 @@ func (h *Handler) HandleUpdateSiteState(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Invalid state value", http.StatusBadRequest)
 		return
 	}
-	userEmail, err := h.getUserEmailFromToken(r)
+	userEmail, err := h.getUserFromSession(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -133,18 +131,4 @@ func (h *Handler) HandleUpdateSiteState(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Write([]byte("State updated successfully"))
-}
-
-func HandleLogout(w http.ResponseWriter, r *http.Request) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     "auth_token",
-		Value:    "",
-		Expires:  time.Unix(0, 0),
-		HttpOnly: true,
-		Secure:   true, // Set this to true if using HTTPS
-		Domain:   "",   // Adjust to your domain
-		Path:     "/",
-	})
-
-	w.Write([]byte("Logged out successfully"))
 }
