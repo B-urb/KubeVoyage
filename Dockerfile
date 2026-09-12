@@ -1,4 +1,4 @@
-FROM golang:1.26
+FROM golang:1.27
 # Define an argument for the architecture, which will be passed from the build command
 ARG TARGETARCH
 LABEL authors="bjornurban"
